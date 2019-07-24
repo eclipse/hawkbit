@@ -101,11 +101,14 @@ public class PropertyBasedArtifactUrlHandler implements ArtifactUrlHandler {
         String urlPattern = protocol.getRef();
 
         for (final Entry<String, String> entry : entrySet) {
+            String value = System.getenv("HAWKBIT_" + entry.getKey().toUpperCase());
+            if (StringUtils.isEmpty(value))
+                value = entry.getValue();
             if (entry.getKey().equals(PORT_PLACEHOLDER)) {
                 urlPattern = urlPattern.replace(":{" + entry.getKey() + "}",
-                        StringUtils.isEmpty(entry.getValue()) ? "" : (":" + entry.getValue()));
+                        StringUtils.isEmpty(value) ? "" : (":" + value));
             } else {
-                urlPattern = urlPattern.replace("{" + entry.getKey() + "}", entry.getValue());
+                urlPattern = urlPattern.replace("{" + entry.getKey() + "}", value);
             }
         }
         return urlPattern;
