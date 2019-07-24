@@ -31,6 +31,11 @@ public class ArtifactUrlHandlerProperties {
     private final Map<String, UrlProtocol> protocols = new HashMap<>();
 
     /**
+     * When the context path is empty, the value remains "${server.servlet.context-path}".
+     */
+    private static final String defaultContextPath = "${server.servlet.context-path}";
+
+    /**
      * Protocol specific properties to generate URLs accordingly.
      *
      */
@@ -68,6 +73,11 @@ public class ArtifactUrlHandlerProperties {
          * Hostname placeholder that can be used in ref pattern.
          */
         private String hostname = "localhost";
+
+        /**
+         * ContextPath placeholder that can be used in ref pattern.
+         */
+        private String contextPath = "";
 
         /**
          * IP address placeholder that can be used in ref pattern.
@@ -148,6 +158,18 @@ public class ArtifactUrlHandlerProperties {
 
         public void setProtocol(final String protocol) {
             this.protocol = protocol;
+        }
+
+        public String getContextPath() {
+            if (contextPath.equals(defaultContextPath)) {
+                return "";
+            } else {
+                return contextPath;
+            }
+        }
+
+        public void setContextPath(final String contextPath) {
+            this.contextPath = contextPath;
         }
 
     }
