@@ -134,9 +134,6 @@ public class JpaControllerManagement extends JpaActionManagement implements Cont
     private TenantConfigurationManagement tenantConfigurationManagement;
 
     @Autowired
-    private SystemSecurityContext systemSecurityContext;
-
-    @Autowired
     private EntityFactory entityFactory;
 
     @Autowired
@@ -155,8 +152,9 @@ public class JpaControllerManagement extends JpaActionManagement implements Cont
     private TenantAware tenantAware;
 
     JpaControllerManagement(final ScheduledExecutorService executorService,
-            final RepositoryProperties repositoryProperties, final ActionRepository actionRepository) {
-        super(actionRepository, repositoryProperties);
+            final RepositoryProperties repositoryProperties, final ActionRepository actionRepository,
+            final SystemSecurityContext systemSecurityContext) {
+        super(actionRepository, repositoryProperties, systemSecurityContext);
 
         if (!repositoryProperties.isEagerPollPersistence()) {
             executorService.scheduleWithFixedDelay(this::flushUpdateQueue,
@@ -391,7 +389,7 @@ public class JpaControllerManagement extends JpaActionManagement implements Cont
                 .orElseGet(() -> createTarget(controllerId, address, name));
     }
 
-    private Target createTarget(final String controllerId, final URI address, String name) {
+    private Target createTarget(final String controllerId, final URI address, final String name) {
 
         final Target result = targetRepository.save((JpaTarget) entityFactory.target().create()
                 .controllerId(controllerId).description("Plug and Play target: " + controllerId).name((StringUtils.hasText(name) ? name : controllerId))

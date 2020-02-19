@@ -142,7 +142,7 @@ public class DeploymentView extends AbstractNotificationView implements BrowserW
 
         if (permChecker.hasTargetReadPermission()) {
             this.actionHistoryLayout = new ActionHistoryLayout(i18n, deploymentManagement, eventBus, uiNotification,
-                    managementUIState, permChecker);
+                    managementUIState, permChecker, configManagement, systemSecurityContext);
             this.actionStatusLayout = new ActionStatusLayout(i18n, eventBus, managementUIState);
             this.actionStatusMsgLayout = new ActionStatusMsgLayout(i18n, eventBus, managementUIState);
             this.targetTagFilterLayout = new TargetTagFilterLayout(i18n, managementUIState,

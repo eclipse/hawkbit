@@ -8,14 +8,21 @@
  */
 package org.eclipse.hawkbit.repository.jpa;
 
+import static org.eclipse.hawkbit.repository.TimestampCalculator.getTenantConfigurationManagement;
+import static org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey.MULTI_ASSIGNMENTS_WEIGHT_DEFAULT;
+
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.eclipse.hawkbit.repository.RepositoryProperties;
+import org.eclipse.hawkbit.repository.jpa.utils.TenantConfigHelper;
 import org.eclipse.hawkbit.repository.model.Action;
+import org.eclipse.hawkbit.security.SystemSecurityContext;
 import org.springframework.data.domain.PageRequest;
 
 /**
@@ -25,15 +32,18 @@ public class JpaActionManagement {
 
     protected final ActionRepository actionRepository;
     protected final RepositoryProperties repositoryProperties;
+    protected final SystemSecurityContext systemSecurityContext;
 
     protected JpaActionManagement(final ActionRepository actionRepository,
-            final RepositoryProperties repositoryProperties) {
+                                  final RepositoryProperties repositoryProperties,
+                                  final SystemSecurityContext systemSecurityContext) {
         this.actionRepository = actionRepository;
         this.repositoryProperties = repositoryProperties;
+        this.systemSecurityContext = systemSecurityContext;
     }
-    
+
     protected List<Action> findActiveActionsWithHighestWeightConsideringDefault(final String controllerId,
-            final int maxActionCount) {
+                                                                                final int maxActionCount) {
         if (!actionRepository.activeActionExistsForControllerId(controllerId)) {
             return Collections.emptyList();
         }
@@ -50,8 +60,14 @@ public class JpaActionManagement {
         return actions.stream().sorted(actionImportance).limit(maxActionCount).collect(Collectors.toList());
     }
 
+    private <T extends Serializable> Optional<T> readConfigValue(final String key, final Class<T> valueType) {
+        return Optional.ofNullable(TenantConfigHelper.usingContext(systemSecurityContext,
+                getTenantConfigurationManagement()).getConfigValue(key, valueType));
+    }
+
     protected int getWeightConsideringDefault(final Action action) {
-        return action.getWeight().orElse(repositoryProperties.getActionWeightIfAbsent());
+        return action.getWeight().orElse(readConfigValue(MULTI_ASSIGNMENTS_WEIGHT_DEFAULT, Integer.class)
+                        .orElse(repositoryProperties.getActionWeightIfAbsent()));
     }
 
 }

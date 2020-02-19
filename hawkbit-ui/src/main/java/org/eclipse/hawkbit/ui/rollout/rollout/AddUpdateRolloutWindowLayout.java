@@ -8,6 +8,8 @@
  */
 package org.eclipse.hawkbit.ui.rollout.rollout;
 
+import static org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey.MULTI_ASSIGNMENTS_WEIGHT_DEFAULT;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,10 +20,12 @@ import java.util.stream.Collectors;
 
 import org.eclipse.hawkbit.repository.EntityFactory;
 import org.eclipse.hawkbit.repository.QuotaManagement;
+import org.eclipse.hawkbit.repository.RepositoryProperties;
 import org.eclipse.hawkbit.repository.RolloutGroupManagement;
 import org.eclipse.hawkbit.repository.RolloutManagement;
 import org.eclipse.hawkbit.repository.TargetFilterQueryManagement;
 import org.eclipse.hawkbit.repository.TargetManagement;
+import org.eclipse.hawkbit.repository.TenantConfigurationManagement;
 import org.eclipse.hawkbit.repository.builder.RolloutCreate;
 import org.eclipse.hawkbit.repository.builder.RolloutGroupCreate;
 import org.eclipse.hawkbit.repository.builder.RolloutUpdate;
@@ -39,6 +43,8 @@ import org.eclipse.hawkbit.repository.model.RolloutGroupConditionBuilder;
 import org.eclipse.hawkbit.repository.model.RolloutGroupConditions;
 import org.eclipse.hawkbit.repository.model.RolloutGroupsValidation;
 import org.eclipse.hawkbit.repository.model.TargetFilterQuery;
+import org.eclipse.hawkbit.security.SystemSecurityContext;
+import org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey;
 import org.eclipse.hawkbit.ui.UiProperties;
 import org.eclipse.hawkbit.ui.common.CommonDialogWindow;
 import org.eclipse.hawkbit.ui.common.CommonDialogWindow.SaveDialogCloseListener;
@@ -112,6 +118,8 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
 
     private static final String DENY_BUTTON_LABEL = "button.deny";
 
+    private static final String WEIGHT_TEXTFIELD = "textfield.weight";
+
     private final ActionTypeOptionGroupAssignmentLayout actionTypeOptionGroupLayout;
 
     private final AutoStartOptionGroupLayout autoStartOptionGroupLayout;
@@ -180,6 +188,12 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
 
     private TextField approvalRemarkField;
 
+    private TextField rolloutWeight;
+
+    private final transient TenantConfigurationManagement configManagement;
+
+    private final transient SystemSecurityContext systemSecurityContext;
+
     private final transient RolloutGroupConditions defaultRolloutGroupConditions;
 
     private final NullValidator nullValidator = new NullValidator(null, false);
@@ -189,7 +203,9 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
             final UINotification uiNotification, final UiProperties uiProperties, final EntityFactory entityFactory,
             final VaadinMessageSource i18n, final UIEventBus eventBus,
             final TargetFilterQueryManagement targetFilterQueryManagement,
-            final RolloutGroupManagement rolloutGroupManagement, final QuotaManagement quotaManagement) {
+            final RolloutGroupManagement rolloutGroupManagement, final QuotaManagement quotaManagement,
+            final TenantConfigurationManagement configManagement, final SystemSecurityContext systemSecurityContext,
+            final RepositoryProperties repositoryProperties) {
         actionTypeOptionGroupLayout = new ActionTypeOptionGroupAssignmentLayout(i18n);
         autoStartOptionGroupLayout = new AutoStartOptionGroupLayout(i18n);
         this.rolloutManagement = rolloutManagement;
@@ -202,6 +218,8 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
         this.i18n = i18n;
         this.eventBus = eventBus;
         this.targetFilterQueryManagement = targetFilterQueryManagement;
+        this.configManagement = configManagement;
+        this.systemSecurityContext = systemSecurityContext;
 
         defineGroupsLayout = new DefineGroupsLayout(i18n, entityFactory, rolloutManagement, targetFilterQueryManagement,
                 rolloutGroupManagement, quotaManagement);
@@ -273,7 +291,9 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
             final RolloutUpdate rolloutUpdate = entityFactory.rollout().update(rollout.getId())
                     .name(rolloutName.getValue()).description(description.getValue()).set(distributionSetId)
                     .actionType(getActionType()).forcedTime(getForcedTimeStamp());
-
+            if (isMultiAssignmentEnabled()) {
+                rolloutUpdate.weight(Integer.valueOf(rolloutWeight.getValue().replace(",", "")));
+            }
             if (AutoStartOptionGroupLayout.AutoStartOption.AUTO_START == getAutoStartOption()) {
                 rolloutUpdate.startAt(System.currentTimeMillis());
             }
@@ -329,14 +349,15 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
             final RolloutCreate rolloutCreate = entityFactory.rollout().create().name(rolloutName.getValue())
                     .description(description.getValue()).set(distributionId).targetFilterQuery(getTargetFilterQuery())
                     .actionType(getActionType()).forcedTime(getForcedTimeStamp());
-
+            if (isMultiAssignmentEnabled()) {
+                rolloutCreate.weight(Integer.valueOf(rolloutWeight.getValue().replace(",", "")));
+            }
             if (AutoStartOptionGroupLayout.AutoStartOption.AUTO_START == getAutoStartOption()) {
                 rolloutCreate.startAt(System.currentTimeMillis());
             }
             if (AutoStartOptionGroupLayout.AutoStartOption.SCHEDULED == getAutoStartOption()) {
                 rolloutCreate.startAt(getScheduledStartTime());
             }
-
             if (isNumberOfGroups()) {
                 return rolloutManagement.create(rolloutCreate, amountGroup, conditions);
             } else if (isGroupsDefinition()) {
@@ -384,6 +405,7 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
     CommonDialogWindow getWindow(final Long rolloutId, final boolean copy) {
         resetComponents();
         window = createWindow();
+        configureWeightComponent();
         populateData(rolloutId, copy);
         return window;
     }
@@ -399,10 +421,25 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
     public CommonDialogWindow getWindow() {
         resetComponents();
         window = createWindow();
+        configureWeightComponent();
         window.updateAllComponents(noOfGroups);
         window.updateAllComponents(triggerThreshold);
         window.updateAllComponents(errorThreshold);
         return window;
+    }
+
+    private void configureWeightComponent() {
+        removeComponent(rolloutWeight);
+        removeComponent(0, 3);
+        rolloutWeight.removeAllValidators();
+        if (isMultiAssignmentEnabled()) {
+            addComponent(getMandatoryLabel(WEIGHT_TEXTFIELD), 0, 3);
+            addComponent(rolloutWeight, 1, 3);
+            rolloutWeight.addValidator(nullValidator);
+            rolloutWeight.addValidator(new WeightFieldValidator());
+            rolloutWeight.setValue(String.valueOf(configManagement
+                    .getConfigurationValue(MULTI_ASSIGNMENTS_WEIGHT_DEFAULT, Integer.class).getValue()));
+        }
     }
 
     /**
@@ -413,6 +450,7 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
         editRolloutEnabled = false;
         rolloutName.clear();
         targetFilterQuery.clear();
+        rolloutWeight.clear();
         resetFields();
         enableFields();
         populateDistributionSet();
@@ -462,13 +500,15 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
         errorThreshold.removeStyleName(SPUIStyleDefinitions.SP_TEXTFIELD_ERROR);
         description.clear();
         description.removeStyleName(SPUIStyleDefinitions.SP_TEXTFIELD_ERROR);
+        rolloutWeight.removeStyleName(SPUIStyleDefinitions.SP_TEXTFIELD_ERROR);
+
     }
 
     private void buildLayout() {
 
         setSpacing(true);
         setSizeUndefined();
-        setRows(8);
+        setRows(9);
         setColumns(4);
         setStyleName("marginTop");
         setColumnExpandRatio(3, 1);
@@ -488,22 +528,27 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
         targetFilterQueryCombo.addValidator(new TargetExistsValidator());
         targetFilterQuery.removeValidator(nullValidator);
 
-        addComponent(getLabel("textfield.description"), 0, 3);
-        addComponent(description, 1, 3, 1, 3);
+        addComponent(getMandatoryLabel(WEIGHT_TEXTFIELD), 0, 3);
+        addComponent(rolloutWeight, 1, 3);
+        rolloutWeight.addValidator(nullValidator);
+        rolloutWeight.addValidator(new WeightFieldValidator());
 
-        addComponent(groupsLegendLayout, 3, 0, 3, 3);
-        addComponent(groupsPieChart, 2, 0, 2, 3);
+        addComponent(getLabel("textfield.description"), 0, 4);
+        addComponent(description, 1, 4, 1, 4);
 
-        addComponent(getMandatoryLabel("caption.rollout.action.type"), 0, 4);
-        addComponent(actionTypeOptionGroupLayout, 1, 4, 3, 4);
+        addComponent(groupsLegendLayout, 3, 0, 3, 4);
+        addComponent(groupsPieChart, 2, 0, 2, 4);
 
-        addComponent(getMandatoryLabel("caption.rollout.start.type"), 0, 5);
-        addComponent(autoStartOptionGroupLayout, 1, 5, 3, 5);
+        addComponent(getMandatoryLabel("caption.rollout.action.type"), 0, 5);
+        addComponent(actionTypeOptionGroupLayout, 1, 5, 3, 5);
 
-        addComponent(groupsDefinitionTabs, 0, 6, 3, 6);
+        addComponent(getMandatoryLabel("caption.rollout.start.type"), 0, 6);
+        addComponent(autoStartOptionGroupLayout, 1, 6, 3, 6);
 
-        addComponent(approvalLabel, 0, 7);
-        addComponent(approvalButtonsLayout, 1, 7, 3, 7);
+        addComponent(groupsDefinitionTabs, 0, 7, 3, 7);
+
+        addComponent(approvalLabel, 0, 8);
+        addComponent(approvalButtonsLayout, 1, 8, 3, 8);
 
         rolloutName.focus();
     }
@@ -545,6 +590,8 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
 
         targetFilterQueryCombo = createTargetFilterQueryCombo();
         populateTargetFilterQuery();
+
+        rolloutWeight = createRolloutWeightField();
 
         noOfGroups = createNoOfGroupsField();
         groupSizeLabel = createCountLabel();
@@ -909,6 +956,14 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
         return rolloutNameField;
     }
 
+    private TextField createRolloutWeightField() {
+        final TextField rolloutWeightField = createIntegerTextField(WEIGHT_TEXTFIELD,
+                UIComponentIdProvider.ROLLOUT_WEIGHT_FIELD_ID);
+
+        rolloutWeightField.setMaxLength(4);
+        return rolloutWeightField;
+    }
+
     class ErrorThresholdOptionValidator implements Validator {
         private static final long serialVersionUID = 1L;
 
@@ -990,6 +1045,18 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
         }
     }
 
+    class WeightFieldValidator implements Validator {
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public void validate(final Object value) {
+            if (value != null) {
+                new IntegerRangeValidator(i18n.getMessage(MESSAGE_ROLLOUT_FIELD_VALUE_RANGE, 0, 1000), 0, 1000)
+                        .validate(Integer.valueOf(value.toString()));
+            }
+        }
+    }
+
     private void populateData(final Long rolloutId, final boolean copy) {
         if (rolloutId == null) {
             return;
@@ -1009,6 +1076,11 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
         if (copy) {
             rolloutName.setValue(i18n.getMessage("textfield.rollout.copied.name", rollout.getName()));
             populateTargetFilterQuery(rollout);
+
+            if (isMultiAssignmentEnabled()) {
+                final Optional<Integer> weight = rollout.getWeight();
+                rolloutWeight.setValue(weight.isPresent() ? String.valueOf(weight.get().intValue()) : "");
+            }
 
             defineGroupsLayout.populateByRollout(rollout);
             groupsDefinitionTabs.setSelectedTab(1);
@@ -1030,6 +1102,16 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
 
             rolloutName.setValue(rollout.getName());
             groupsDefinitionTabs.setVisible(false);
+
+            final Optional<Integer> weight = rollout.getWeight();
+            if (isMultiAssignmentEnabled()) {
+                if (weight.isPresent()) {
+                    rolloutWeight.setValue(String.valueOf(weight.get().intValue()));
+                } else {
+                    rolloutWeight.setValue(String.valueOf(configManagement
+                            .getConfigurationValue(MULTI_ASSIGNMENTS_WEIGHT_DEFAULT, Integer.class).getValue()));
+                }
+            }
 
             targetFilterQuery.setValue(rollout.getTargetFilterQuery());
             removeComponent(1, 2);
@@ -1055,6 +1137,7 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
     private void disableRequiredFieldsOnEdit() {
         noOfGroups.setEnabled(false);
         distributionSet.setEnabled(false);
+        rolloutWeight.setEnabled(false);
         errorThreshold.setEnabled(false);
         triggerThreshold.setEnabled(false);
         errorThresholdOptionGroup.setEnabled(false);
@@ -1066,6 +1149,7 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
 
     private void enableFields() {
         distributionSet.setEnabled(true);
+        rolloutWeight.setEnabled(true);
         errorThreshold.setEnabled(true);
         triggerThreshold.setEnabled(true);
         actionTypeOptionGroupLayout.getActionTypeOptionGroup().setEnabled(true);
@@ -1117,5 +1201,10 @@ public class AddUpdateRolloutWindowLayout extends GridLayout {
         private String getValue(final VaadinMessageSource i18n) {
             return i18n.getMessage(value);
         }
+    }
+
+    private boolean isMultiAssignmentEnabled() {
+        return systemSecurityContext.runAsSystem(() -> configManagement
+                .getConfigurationValue(TenantConfigurationKey.MULTI_ASSIGNMENTS_ENABLED, Boolean.class).getValue());
     }
 }

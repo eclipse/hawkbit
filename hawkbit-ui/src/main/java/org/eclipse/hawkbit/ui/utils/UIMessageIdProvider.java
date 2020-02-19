@@ -27,6 +27,8 @@ public final class UIMessageIdProvider {
 
     public static final String HEADER_DISTRIBUTION_SET = "header.distributionset";
 
+    public static final String HEADER_WEIGHT = "header.weight";
+
     public static final String CAPTION_ACTION_FORCED = "label.action.forced";
 
     public static final String CAPTION_ACTION_SOFT = "label.action.soft";
@@ -138,6 +140,8 @@ public final class UIMessageIdProvider {
     public static final String TOOLTIP_SOFT_ITEM = "tooltip.soft.item";
 
     public static final String TOOLTIP_DOWNLOAD_ONLY_ITEM = "tooltip.downloadonly.item";
+
+    public static final String TOOLTIP_WEIGHT = "tooltip.weight";
 
     public static final String TOOLTIP_FORCED_ITEM = "tooltip.forced.item";
 

@@ -267,6 +267,18 @@ public final class HawkbitCommonUtil {
     }
 
     /**
+     * @param weight
+     *            the weight of an action
+     * @param dsNameVersion
+     *            the formatted name and version of the distribution set
+     * @return WeightDSNameVersion the concatenated string of weight and
+     *         distribution set name and version
+     */
+    public static String getWeightDSNameVersion(final String weight, final String dsNameVersion) {
+        return new StringBuilder(dsNameVersion).append(' ').append('(').append(weight).append(')').toString();
+    }
+
+    /**
      * Display Target Tag action message.
      *
      * @param tagName

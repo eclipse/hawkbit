@@ -212,7 +212,7 @@ public abstract class AbstractDsAssignmentStrategy {
             final JpaAction actionForTarget = new JpaAction();
             actionForTarget.setActionType(targetWithActionType.getActionType());
             actionForTarget.setForcedTime(targetWithActionType.getForceTime());
-            actionForTarget.setWeight(targetWithActionType.getWeight());
+            targetWithActionType.getWeight().ifPresent(weight -> actionForTarget.setWeight(weight));
             actionForTarget.setActive(true);
             actionForTarget.setTarget(target);
             actionForTarget.setDistributionSet(set);

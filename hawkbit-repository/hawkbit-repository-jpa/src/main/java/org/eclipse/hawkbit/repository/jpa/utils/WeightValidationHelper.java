@@ -49,17 +49,31 @@ public final class WeightValidationHelper {
 
     /**
      * Validating weights associated with all the {@link DeploymentRequest}s
-     * 
+     *
      * @param deploymentRequests
      *            the {@linkplain List} of {@link DeploymentRequest}s
      */
     public void validate(final List<DeploymentRequest> deploymentRequests) {
         final long assignmentsWithWeight = deploymentRequests.stream()
-                .filter(request -> request.getTargetWithActionType().getWeight() != null).count();
+                .filter(request -> request.getTargetWithActionType().getWeight().isPresent()).count();
         final boolean containsAssignmentWithWeight = assignmentsWithWeight > 0;
         final boolean containsAssignmentWithoutWeight = assignmentsWithWeight < deploymentRequests.size();
 
         validateWeight(containsAssignmentWithWeight, containsAssignmentWithoutWeight);
+    }
+
+    /**
+     * Validating weights associated with all the {@link DeploymentRequest}s accepting null weight
+     *
+     * @param deploymentRequests
+     *            the {@linkplain List} of {@link DeploymentRequest}s
+     */
+    public void validateAcceptNullWeight(final List<DeploymentRequest> deploymentRequests) {
+        final long assignmentsWithWeight = deploymentRequests.stream()
+                .filter(request -> request.getTargetWithActionType().getWeight().isPresent()).count();
+        final boolean containsAssignmentWithWeight = assignmentsWithWeight > 0;
+
+        validateWeightAcceptingNull(containsAssignmentWithWeight);
     }
 
     /**
@@ -109,24 +123,34 @@ public final class WeightValidationHelper {
     /**
      * Checks if the weight is valid with the multi-assignments being turned
      * off/on.
-     * 
+     *
      * @param hasWeight
      *            indicator of the weight if it has numerical value
      * @param hasNoWeight
      *            indicator of the weight if it doesn't have a numerical value
      */
     public void validateWeight(final boolean hasWeight, final boolean hasNoWeight) {
-        // remove bypassing the weight enforcement as soon as weight can be set
-        // via UI
-        final boolean bypassWeightEnforcement = true;
         final boolean multiAssignmentsEnabled = TenantConfigHelper
                 .usingContext(systemSecurityContext, tenantConfigurationManagement).isMultiAssignmentsEnabled();
         if (!multiAssignmentsEnabled && hasWeight) {
             throw new MultiAssignmentIsNotEnabledException();
-        } else if (bypassWeightEnforcement) {
-            return;
         } else if (multiAssignmentsEnabled && hasNoWeight) {
             throw new NoWeightProvidedInMultiAssignmentModeException();
+        }
+    }
+
+    /**
+     * Checks if the weight is valid with the multi-assignments being turned
+     * off/on and accept no weight.
+     *
+     * @param hasWeight
+     *            indicator of the weight if it has numerical value
+     */
+    public void validateWeightAcceptingNull(final boolean hasWeight) {
+        final boolean multiAssignmentsEnabled = TenantConfigHelper
+                .usingContext(systemSecurityContext, tenantConfigurationManagement).isMultiAssignmentsEnabled();
+        if (!multiAssignmentsEnabled && hasWeight) {
+            throw new MultiAssignmentIsNotEnabledException();
         }
     }
 }

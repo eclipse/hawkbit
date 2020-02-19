@@ -355,6 +355,8 @@ public final class SPUIDefinitions {
 
     public static final String ACTION_HIS_TBL_MAINTENANCE_WINDOW = "Maintenance Window";
 
+    public static final String ACTION_WEIGHT_COLUMN = "Weight";
+
     /**
      * id for delete icon in entity table
      */

@@ -27,6 +27,7 @@ public class ProxyAction implements Serializable {
     public static final String PXY_ACTION_LAST_MODIFIED_AT = "lastModifiedAt";
     public static final String PXY_ACTION_ROLLOUT_NAME = "rolloutName";
     public static final String PXY_ACTION_MAINTENANCE_WINDOW = "maintenanceWindow";
+    public static final String PXY_ACTION_WEIGHT = "weight";
 
     private Action.Status status;
     private boolean isActive;
@@ -37,11 +38,23 @@ public class ProxyAction implements Serializable {
     private Long lastModifiedAt;
     private String rolloutName;
     private String maintenanceWindow;
+    private Integer weight;
 
+    /**
+     * Get maintenance window.
+     *
+     * @return maintenance window
+     */
     public String getMaintenanceWindow() {
         return maintenanceWindow;
     }
 
+    /**
+     * Set maintenance window.
+     *
+     * @param maintenanceWindow
+     *            maintenance window.
+     */
     public void setMaintenanceWindow(final String maintenanceWindow) {
         this.maintenanceWindow = maintenanceWindow;
     }
@@ -200,6 +213,24 @@ public class ProxyAction implements Serializable {
      */
     public void setRolloutName(final String rolloutName) {
         this.rolloutName = rolloutName;
+    }
+
+    /**
+     * Gets the weight.
+     *
+     * @return weight
+     */
+    public Integer getWeight() {
+        return weight;
+    }
+
+    /**
+     * Sets the weight.
+     *
+     * @param weight
+     */
+    public void setWeight(final Integer weight) {
+        this.weight = weight;
     }
 
     /**

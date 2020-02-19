@@ -45,6 +45,12 @@
       color: $button-icon-color;
     }
 
+    #weight-help-link .v-icon {
+      position: relative;
+      right: 0px;
+      bottom: 0px;
+    }
+
   }
     
   .durationfield .v-datefield-calendarpanel-header,

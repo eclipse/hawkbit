@@ -45,6 +45,7 @@ import org.eclipse.hawkbit.repository.TargetFilterQueryManagement;
 import org.eclipse.hawkbit.repository.TargetManagement;
 import org.eclipse.hawkbit.repository.TargetTagManagement;
 import org.eclipse.hawkbit.repository.TenantConfigurationManagement;
+import org.eclipse.hawkbit.repository.exception.MultiAssignmentIsNotEnabledException;
 import org.eclipse.hawkbit.repository.model.Action;
 import org.eclipse.hawkbit.repository.model.Action.ActionType;
 import org.eclipse.hawkbit.repository.model.DeploymentRequest;
@@ -330,6 +331,13 @@ public abstract class AbstractIntegrationTest {
 
     protected void enableMultiAssignments() {
         tenantConfigurationManagement.addOrUpdateConfiguration(TenantConfigurationKey.MULTI_ASSIGNMENTS_ENABLED, true);
+    }
+
+    protected void setTenantDefaultWeightValue(final int weight) {
+        if (tenantConfigurationManagement.getConfigurationValue(TenantConfigurationKey.MULTI_ASSIGNMENTS_ENABLED).getValue().equals(false)){
+            throw new MultiAssignmentIsNotEnabledException("Tenant weight can be set only when multi assignment is activated.");
+        }
+        tenantConfigurationManagement.addOrUpdateConfiguration(TenantConfigurationKey.MULTI_ASSIGNMENTS_WEIGHT_DEFAULT, weight);
     }
 
     protected DistributionSetMetadata createDistributionSetMetadata(final long dsId, final MetaData md) {

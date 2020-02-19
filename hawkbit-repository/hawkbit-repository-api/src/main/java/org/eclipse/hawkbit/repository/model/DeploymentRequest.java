@@ -8,6 +8,7 @@
  */
 package org.eclipse.hawkbit.repository.model;
 
+
 import java.util.Objects;
 
 import javax.validation.Valid;
@@ -80,7 +81,7 @@ public class DeploymentRequest {
         return String.format(
                 "DeploymentRequest [controllerId=%s, distributionSetId=%d, actionType=%s, forceTime=%d, weight=%d, maintenanceSchedule=%s, maintenanceWindowDuration=%s, maintenanceWindowTimeZone=%s]",
                 targetWithActionType.getControllerId(), getDistributionSetId(), targetWithActionType.getActionType(),
-                targetWithActionType.getForceTime(), targetWithActionType.getWeight(),
+                targetWithActionType.getForceTime(), targetWithActionType.getWeight().orElse(null),
                 targetWithActionType.getMaintenanceSchedule(), targetWithActionType.getMaintenanceWindowDuration(),
                 targetWithActionType.getMaintenanceWindowTimeZone());
     }

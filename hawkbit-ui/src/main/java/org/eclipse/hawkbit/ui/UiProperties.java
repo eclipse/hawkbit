@@ -8,13 +8,13 @@
  */
 package org.eclipse.hawkbit.ui;
 
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
-
-import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Properties for Management UI customization.
@@ -200,6 +200,11 @@ public class UiProperties implements Serializable {
             private String rollout = "";
 
             /**
+             * Link to multi assignments related documentation.
+             */
+            private String multiAssignments = "";
+
+            /**
              * Link to target filter view.
              */
             private String targetfilterView = "";
@@ -233,6 +238,10 @@ public class UiProperties implements Serializable {
 
             public String getRollout() {
                 return rollout;
+            }
+
+            public String getMultiAssignments() {
+                return multiAssignments;
             }
 
             public String getSystemConfigurationView() {
@@ -277,6 +286,10 @@ public class UiProperties implements Serializable {
 
             public void setRollout(final String rollout) {
                 this.rollout = rollout;
+            }
+
+            public void setMultiAssignments(String multiAssignments) {
+                this.multiAssignments = multiAssignments;
             }
 
             public void setSystemConfigurationView(final String systemConfigurationView) {

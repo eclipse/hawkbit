@@ -8,6 +8,8 @@
  */
 package org.eclipse.hawkbit.ui.management;
 
+import static org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey.MULTI_ASSIGNMENTS_WEIGHT_DEFAULT;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +19,7 @@ import java.util.stream.Collectors;
 
 import org.eclipse.hawkbit.repository.DeploymentManagement;
 import org.eclipse.hawkbit.repository.MaintenanceScheduleHelper;
+import org.eclipse.hawkbit.repository.TenantConfigurationManagement;
 import org.eclipse.hawkbit.repository.exception.InvalidMaintenanceScheduleException;
 import org.eclipse.hawkbit.repository.exception.MultiAssignmentIsNotEnabledException;
 import org.eclipse.hawkbit.repository.model.Action.ActionType;
@@ -26,6 +29,8 @@ import org.eclipse.hawkbit.repository.model.DistributionSet;
 import org.eclipse.hawkbit.repository.model.DistributionSetAssignmentResult;
 import org.eclipse.hawkbit.repository.model.RepositoryModelConstants;
 import org.eclipse.hawkbit.repository.model.Target;
+import org.eclipse.hawkbit.security.SystemSecurityContext;
+import org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey;
 import org.eclipse.hawkbit.ui.UiProperties;
 import org.eclipse.hawkbit.ui.common.confirmwindow.layout.ConfirmationTab;
 import org.eclipse.hawkbit.ui.common.entity.TargetIdName;
@@ -36,6 +41,7 @@ import org.eclipse.hawkbit.ui.management.miscs.AbstractActionTypeOptionGroupLayo
 import org.eclipse.hawkbit.ui.management.miscs.AbstractActionTypeOptionGroupLayout.ActionTypeOption;
 import org.eclipse.hawkbit.ui.management.miscs.ActionTypeOptionGroupAssignmentLayout;
 import org.eclipse.hawkbit.ui.management.miscs.MaintenanceWindowLayout;
+import org.eclipse.hawkbit.ui.management.miscs.WeightLayout;
 import org.eclipse.hawkbit.ui.management.state.ManagementUIState;
 import org.eclipse.hawkbit.ui.utils.UIComponentIdProvider;
 import org.eclipse.hawkbit.ui.utils.UINotification;
@@ -45,9 +51,11 @@ import org.slf4j.LoggerFactory;
 import org.vaadin.spring.events.EventBus.UIEventBus;
 
 import com.vaadin.data.Property;
+import com.vaadin.event.FieldEvents.TextChangeEvent;
 import com.vaadin.ui.CheckBox;
 import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.Link;
+import com.vaadin.ui.TextField;
 import com.vaadin.ui.themes.ValoTheme;
 
 /**
@@ -90,7 +98,8 @@ public final class TargetAssignmentOperations {
             final ActionTypeOptionGroupAssignmentLayout actionTypeOptionGroupLayout,
             final MaintenanceWindowLayout maintenanceWindowLayout, final DeploymentManagement deploymentManagement,
             final UINotification notification, final UIEventBus eventBus, final VaadinMessageSource i18n,
-            final Object eventSource) {
+            final Object eventSource, final TenantConfigurationManagement configManagement,
+            final SystemSecurityContext systemSecurityContext, final TextField weightField) {
 
         final ActionType actionType = ((ActionTypeOption) actionTypeOptionGroupLayout.getActionTypeOptionGroup()
                 .getValue()).getActionType();
@@ -109,6 +118,9 @@ public final class TargetAssignmentOperations {
         dsIds.forEach(dsId -> targets.forEach(t -> {
             final DeploymentRequestBuilder request = DeploymentManagement.deploymentRequest(t.getControllerId(), dsId)
                     .setActionType(actionType).setForceTime(forcedTimeStamp);
+            if (isMultiAssignmentsEnabled(configManagement, systemSecurityContext)) {
+                request.setWeight(Integer.valueOf(weightField.getValue().replace(",", "")));
+            }
             if (maintenanceWindowLayout.isEnabled()) {
                 request.setMaintenance(maintenanceSchedule, maintenanceDuration, maintenanceTimeZone);
             }
@@ -187,8 +199,8 @@ public final class TargetAssignmentOperations {
      * @param maintenanceWindowLayout
      *            the Maintenance Window Layout
      * @param saveButtonToggle
-     *            The event listener to derimne if save button should be enabled
-     *            or not
+     *            The event listener to determine if save button should be
+     *            enabled or not
      * @param i18n
      *            the Vaadin Message Source for multi language
      * @param uiProperties
@@ -198,17 +210,20 @@ public final class TargetAssignmentOperations {
     public static ConfirmationTab createAssignmentTab(
             final ActionTypeOptionGroupAssignmentLayout actionTypeOptionGroupLayout,
             final MaintenanceWindowLayout maintenanceWindowLayout, final Consumer<Boolean> saveButtonToggle,
-            final VaadinMessageSource i18n, final UiProperties uiProperties) {
+            final VaadinMessageSource i18n, final UiProperties uiProperties, final boolean isMultiAssigmentsEnabled,
+            final WeightLayout weightLayout, final TenantConfigurationManagement configManagement) {
 
         final CheckBox maintenanceWindowControl = maintenanceWindowControl(i18n, maintenanceWindowLayout,
-                saveButtonToggle);
+                saveButtonToggle, isMultiAssigmentsEnabled, weightLayout);
         final Link maintenanceWindowHelpLink = maintenanceWindowHelpLinkControl(uiProperties, i18n);
         final HorizontalLayout layout = createHorizontalLayout(maintenanceWindowControl, maintenanceWindowHelpLink);
         actionTypeOptionGroupLayout.selectDefaultOption();
 
-        initMaintenanceWindow(maintenanceWindowLayout, saveButtonToggle);
+        initMaintenanceWindow(maintenanceWindowLayout, saveButtonToggle, isMultiAssigmentsEnabled,
+                weightLayout.getWeightField());
         addValueChangeListener(actionTypeOptionGroupLayout, maintenanceWindowControl, maintenanceWindowHelpLink);
-        return createAssignmentTab(actionTypeOptionGroupLayout, layout, maintenanceWindowLayout);
+        return createAssignmentTab(actionTypeOptionGroupLayout, layout, maintenanceWindowLayout,
+                isMultiAssigmentsEnabled, weightLayout, configManagement);
     }
 
     private static HorizontalLayout createHorizontalLayout(final CheckBox maintenanceWindowControl,
@@ -221,8 +236,15 @@ public final class TargetAssignmentOperations {
 
     private static ConfirmationTab createAssignmentTab(
             final ActionTypeOptionGroupAssignmentLayout actionTypeOptionGroupLayout, final HorizontalLayout layout,
-            final MaintenanceWindowLayout maintenanceWindowLayout) {
+            final MaintenanceWindowLayout maintenanceWindowLayout, final boolean isMultiAssigmentsEnabled,
+            final WeightLayout weightLayout, final TenantConfigurationManagement configManagement) {
         final ConfirmationTab assignmentTab = new ConfirmationTab();
+        if (isMultiAssigmentsEnabled) {
+            weightLayout.getWeightField().clear();
+            weightLayout.getWeightField().setValue(String.valueOf(configManagement
+                    .getConfigurationValue(MULTI_ASSIGNMENTS_WEIGHT_DEFAULT, Integer.class).getValue()));
+            assignmentTab.addComponent(weightLayout);
+        }
         assignmentTab.addComponent(actionTypeOptionGroupLayout);
         assignmentTab.addComponent(layout);
         assignmentTab.addComponent(maintenanceWindowLayout);
@@ -230,17 +252,46 @@ public final class TargetAssignmentOperations {
     }
 
     private static void initMaintenanceWindow(final MaintenanceWindowLayout maintenanceWindowLayout,
-            final Consumer<Boolean> saveButtonToggle) {
+            final Consumer<Boolean> saveButtonToggle, final boolean isMultiAssigmentsEnabled,
+            final TextField weightField) {
         maintenanceWindowLayout.setVisible(false);
         maintenanceWindowLayout.setEnabled(false);
-        maintenanceWindowLayout.getScheduleControl().addTextChangeListener(
-                event -> saveButtonToggle.accept(maintenanceWindowLayout.onScheduleChange(event)));
-        maintenanceWindowLayout.getDurationControl().addTextChangeListener(
-                event -> saveButtonToggle.accept(maintenanceWindowLayout.onDurationChange(event)));
+        maintenanceWindowLayout.getScheduleControl().addTextChangeListener(event -> saveButtonToggle.accept(
+                saveButtonOnScheduleChange(event, maintenanceWindowLayout, isMultiAssigmentsEnabled, weightField)));
+        maintenanceWindowLayout.getDurationControl().addTextChangeListener(event -> saveButtonToggle.accept(
+                saveButtonOnDurationChange(event, maintenanceWindowLayout, isMultiAssigmentsEnabled, weightField)));
+    }
+
+    private static boolean saveButtonOnScheduleChange(final TextChangeEvent event,
+            final MaintenanceWindowLayout maintenanceWindowLayout, final boolean isMultiAssigmentsEnabled,
+            final TextField weightField) {
+        return validateSaveButtonToggle(maintenanceWindowLayout.onScheduleChange(event), isMultiAssigmentsEnabled,
+                weightField);
+    }
+
+    private static boolean saveButtonOnDurationChange(final TextChangeEvent event,
+            final MaintenanceWindowLayout maintenanceWindowLayout, final boolean isMultiAssigmentsEnabled,
+            final TextField weightField) {
+        return validateSaveButtonToggle(maintenanceWindowLayout.onDurationChange(event), isMultiAssigmentsEnabled,
+                weightField);
+    }
+
+    private static boolean validateSaveButtonToggle(final boolean hasValidDurationOrScheduleChange,
+            final boolean isMultiAssigmentsEnabled, final TextField weightField) {
+        if (hasValidDurationOrScheduleChange && isMultiAssigmentsEnabled) {
+            if (weightField.getValue() != null && (Integer.valueOf(weightField.getValue().replace(",", "")) >= 0
+                    && Integer.valueOf(weightField.getValue().replace(",", "")) <= 1000)) {
+                return isMultiAssigmentsEnabled;
+            } else {
+                return !isMultiAssigmentsEnabled;
+            }
+        }
+        return hasValidDurationOrScheduleChange;
     }
 
     private static CheckBox maintenanceWindowControl(final VaadinMessageSource i18n,
-            final MaintenanceWindowLayout maintenanceWindowLayout, final Consumer<Boolean> saveButtonToggle) {
+            final MaintenanceWindowLayout maintenanceWindowLayout, final Consumer<Boolean> saveButtonToggle,
+            final boolean isMultiAssigmentsEnabled, final WeightLayout weightLayout) {
         final CheckBox enableMaintenanceWindow = new CheckBox(i18n.getMessage("caption.maintenancewindow.enabled"));
         enableMaintenanceWindow.setId(UIComponentIdProvider.MAINTENANCE_WINDOW_ENABLED_ID);
         enableMaintenanceWindow.addStyleName(ValoTheme.CHECKBOX_SMALL);
@@ -249,7 +300,16 @@ public final class TargetAssignmentOperations {
             final Boolean isMaintenanceWindowEnabled = enableMaintenanceWindow.getValue();
             maintenanceWindowLayout.setVisible(isMaintenanceWindowEnabled);
             maintenanceWindowLayout.setEnabled(isMaintenanceWindowEnabled);
-            saveButtonToggle.accept(!isMaintenanceWindowEnabled);
+            if (!isMaintenanceWindowEnabled && isMultiAssigmentsEnabled) {
+                final String weightValue = weightLayout.getWeightField().getValue();
+                if (weightValue != null && weightLayout.checkWeightValue(weightValue)) {
+                    saveButtonToggle.accept(isMultiAssigmentsEnabled);
+                } else {
+                    saveButtonToggle.accept(!isMultiAssigmentsEnabled);
+                }
+            } else {
+                saveButtonToggle.accept(!isMaintenanceWindowEnabled);
+            }
             maintenanceWindowLayout.clearAllControls();
         });
         return enableMaintenanceWindow;
@@ -287,4 +347,9 @@ public final class TargetAssignmentOperations {
         return SPUIComponentProvider.getHelpLink(i18n, maintenanceWindowHelpUrl);
     }
 
+    private static boolean isMultiAssignmentsEnabled(final TenantConfigurationManagement configManagement,
+            final SystemSecurityContext systemSecurityContext) {
+        return systemSecurityContext.runAsSystem(() -> configManagement
+                .getConfigurationValue(TenantConfigurationKey.MULTI_ASSIGNMENTS_ENABLED, Boolean.class).getValue());
+    }
 }

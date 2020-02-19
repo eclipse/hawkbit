@@ -116,6 +116,10 @@ public final class SPUILabelDefinitions {
      * Approval decider.
      */
     public static final String VAR_APPROVAL_DECIDED_BY = "approvalDecidedBy";
+    /**
+     * Rollouts weight ID
+     */
+    public static final String VAR_WEIGHT = "weight";
 
     /**
      * Poll Status.
@@ -133,6 +137,10 @@ public final class SPUILabelDefinitions {
      * AUTO ASSIGN DISTRIBUTION SET ID
      */
     public static final String AUTO_ASSIGN_DISTRIBUTION_SET = "autoAssignDistributionSet";
+    /**
+     * AUTO ASSIGN WEIGHT ID
+     */
+    public static final String AUTO_ASSIGN_WEIGHT_ID = "autoAssignWeight";
     /**
      * AUTO ASSIGN ACTION TYPE
      */

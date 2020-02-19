@@ -90,6 +90,8 @@ public class TenantResourceDocumentationTest extends AbstractApiRestDocumentatio
                 "the expiry time in milliseconds that needs to elapse before an action may be cleaned up.");
         CONFIG_ITEM_DESCRIPTIONS.put(TenantConfigurationKey.MULTI_ASSIGNMENTS_ENABLED,
                 "if multiple distribution sets can be assigned to the same targets.");
+        CONFIG_ITEM_DESCRIPTIONS.put(TenantConfigurationKey.MULTI_ASSIGNMENTS_WEIGHT_DEFAULT,
+                "tenant specific default weight for actions.");
     }
 
     @Autowired

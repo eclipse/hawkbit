@@ -65,8 +65,8 @@ import org.eclipse.hawkbit.repository.test.matcher.ExpectEvents;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.springframework.amqp.core.Message;
+import org.springframework.context.annotation.Description;
 
-import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
 import io.qameta.allure.Story;
 
@@ -190,7 +190,7 @@ public class AmqpMessageDispatcherServiceIntegrationTest extends AbstractAmqpSer
     @Test
     @Description("Verify payload of multi action messages.")
     public void assertMultiActionMessagePayloads() {
-        final int expectedWeightIfNotSet = 1000;
+        final int tenantDefaultWeight = 432;
         final int weight1 = 600;
         final String controllerId = UUID.randomUUID().toString();
         registerAndAssertTargetWithExistingTenant(controllerId);
@@ -200,6 +200,7 @@ public class AmqpMessageDispatcherServiceIntegrationTest extends AbstractAmqpSer
         final Long installActionId = makeAssignment(DeploymentManagement.deploymentRequest(controllerId, ds.getId())
                 .setActionType(ActionType.FORCED).build()).getAssignedEntity().get(0).getId();
         enableMultiAssignments();
+        setTenantDefaultWeightValue(tenantDefaultWeight);
         final Long downloadActionId = makeAssignment(DeploymentManagement.deploymentRequest(controllerId, ds.getId())
                 .setActionType(ActionType.DOWNLOAD_ONLY).setWeight(weight1).build()).getAssignedEntity().get(0).getId();
         final Long cancelActionId = makeAssignment(
@@ -220,7 +221,7 @@ public class AmqpMessageDispatcherServiceIntegrationTest extends AbstractAmqpSer
                 .filter(message -> message.getTopic().equals(EventTopic.DOWNLOAD)).findFirst().get();
         final DmfMultiActionElement cancelMessage = multiActionMessages.stream()
                 .filter(message -> message.getTopic().equals(EventTopic.CANCEL_DOWNLOAD)).findFirst().get();
-        assertThat(installMessage.getWeight()).isEqualTo(expectedWeightIfNotSet);
+        assertThat(installMessage.getWeight()).isEqualTo(tenantDefaultWeight);
         assertThat(downloadMessage.getWeight()).isEqualTo(weight1);
         assertThat(cancelMessage.getWeight()).isEqualTo(DEFAULT_TEST_WEIGHT);
 

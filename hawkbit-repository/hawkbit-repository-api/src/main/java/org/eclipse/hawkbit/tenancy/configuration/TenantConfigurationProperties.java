@@ -147,6 +147,11 @@ public class TenantConfigurationProperties {
          */
         public static final String MULTI_ASSIGNMENTS_ENABLED = "multi.assignments.enabled";
 
+        /**
+         * Specifies the default weight.
+         */
+        public static final String MULTI_ASSIGNMENTS_WEIGHT_DEFAULT = "multi.assignments.weight.default";
+
         private String keyName;
         private String defaultValue = "";
         private Class<?> dataType = String.class;

@@ -8,13 +8,6 @@
  */
 package org.eclipse.hawkbit.repository.jpa;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import javax.persistence.EntityManager;
-
 import org.eclipse.hawkbit.repository.jpa.model.JpaDistributionSet;
 import org.eclipse.hawkbit.repository.jpa.model.JpaTarget;
 import org.eclipse.hawkbit.repository.model.DistributionSet;
@@ -29,6 +22,12 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
+
+import javax.persistence.EntityManager;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * {@link Target} repository.
@@ -181,7 +180,7 @@ public interface TargetRepository extends BaseEntityRepository<JpaTarget, Long>,
      * retrieves {@link Target}s where
      * {@link JpaTarget#isRequestControllerAttributes()}.
      * 
-     * @param pageReq
+     * @param pageable
      *            page parameter
      *
      * @return the found {@link Target}s

@@ -261,7 +261,7 @@ public class AutoAssignCheckerTest extends AbstractJpaIntegrationTest {
 
     @Test
     @Description("An auto assignment target filter with weight creats actions with weights")
-    public void actionsWithWeightAreCreated() throws Exception {
+    public void actionsWithWeightAreCreated() {
         final int amountOfTargets = 5;
         final DistributionSet ds = testdataFactory.createDistributionSet();
         final int weight = 32;
@@ -275,6 +275,25 @@ public class AutoAssignCheckerTest extends AbstractJpaIntegrationTest {
         final List<Action> actions = deploymentManagement.findActionsAll(PAGE).getContent();
         assertThat(actions).hasSize(amountOfTargets);
         assertThat(actions).allMatch(action -> action.getWeight().get() == weight);
+    }
+
+    @Test
+    @Description("An auto assignment target filter without auto assignment weight creates actions without a weight when multi assignment is enabled.")
+    public void actionsWithEmptyWeightCreatedWithOldTargetFilter() {
+        final int amountOfTargets = 5;
+        final DistributionSet ds = testdataFactory.createDistributionSet();
+
+        targetFilterQueryManagement.create(
+                entityFactory.targetFilterQuery().create().name("a").query("name==*").autoAssignDistributionSet(ds));
+
+        enableMultiAssignments();
+
+        testdataFactory.createTargets(amountOfTargets);
+        autoAssignChecker.check();
+
+        final List<Action> actions = deploymentManagement.findActionsAll(PAGE).getContent();
+        assertThat(actions).hasSize(amountOfTargets);
+        assertThat(actions).allMatch(action -> !action.getWeight().isPresent());
     }
 
     @Test

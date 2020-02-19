@@ -286,7 +286,7 @@ public class MaintenanceWindowLayout extends VerticalLayout {
         return isScheduleAndDurationValid();
     }
 
-    private boolean isScheduleAndDurationValid() {
+    public boolean isScheduleAndDurationValid() {
         if (schedule.isEmpty() || duration.isEmpty()) {
             return false;
         }

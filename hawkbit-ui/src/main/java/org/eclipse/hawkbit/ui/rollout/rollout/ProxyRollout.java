@@ -39,6 +39,7 @@ public class ProxyRollout {
     private String name;
     private String version;
     private String description;
+    private Integer weight;
     private String createdBy;
     private String lastModifiedBy;
     private long forcedTime;
@@ -188,6 +189,14 @@ public class ProxyRollout {
 
     public void setDescription(final String description) {
         this.description = description;
+    }
+
+    public Integer getWeight() {
+        return weight;
+    }
+
+    public void setWeight(final Integer weight) {
+        this.weight = weight;
     }
 
     public String getCreatedBy() {

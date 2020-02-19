@@ -14,8 +14,8 @@ import org.eclipse.hawkbit.mgmt.json.model.distributionset.MgmtActionType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Request Body of DistributionSet Id and Action Type for target filter auto
- * assignment operation.
+ * Request Body of DistributionSet Id, weight, and Action Type for target filter
+ * auto assignment operation.
  */
 public class MgmtDistributionSetAutoAssignment extends MgmtId {
 

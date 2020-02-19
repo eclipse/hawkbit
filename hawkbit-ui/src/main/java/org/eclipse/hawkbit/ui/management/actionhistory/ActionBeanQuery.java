@@ -11,16 +11,23 @@ package org.eclipse.hawkbit.ui.management.actionhistory;
 import static org.eclipse.hawkbit.ui.utils.HawkbitCommonUtil.isNotNullOrEmpty;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.eclipse.hawkbit.repository.DeploymentManagement;
 import org.eclipse.hawkbit.repository.OffsetBasedPageRequest;
+import org.eclipse.hawkbit.repository.TenantConfigurationManagement;
 import org.eclipse.hawkbit.repository.model.Action;
+import org.eclipse.hawkbit.security.SystemSecurityContext;
+import org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey;
 import org.eclipse.hawkbit.ui.management.actionhistory.ProxyAction.IsActiveDecoration;
 import org.eclipse.hawkbit.ui.utils.SPUIDefinitions;
 import org.eclipse.hawkbit.ui.utils.SpringContextHelper;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.vaadin.addons.lazyquerycontainer.AbstractBeanQuery;
@@ -36,8 +43,10 @@ public class ActionBeanQuery extends AbstractBeanQuery<ProxyAction> {
 
     private Sort sort = new Sort(Direction.DESC, ProxyAction.PXY_ACTION_ID);
     private transient DeploymentManagement deploymentManagement;
+    private transient TenantConfigurationManagement configManagement;
+    private transient SystemSecurityContext systemSecurityContext;
 
-    private String currentSelectedConrollerId;
+    private String currentSelectedControllerId;
     private transient Slice<Action> firstPageActions;
 
     /**
@@ -57,7 +66,7 @@ public class ActionBeanQuery extends AbstractBeanQuery<ProxyAction> {
         super(definition, queryConfig, sortPropertyIds, sortStates);
 
         if (isNotNullOrEmpty(queryConfig)) {
-            currentSelectedConrollerId = (String) queryConfig.get(SPUIDefinitions.ACTIONS_BY_TARGET);
+            currentSelectedControllerId = (String) queryConfig.get(SPUIDefinitions.ACTIONS_BY_TARGET);
         }
 
         if (sortStates == null || sortStates.length <= 0) {
@@ -79,18 +88,62 @@ public class ActionBeanQuery extends AbstractBeanQuery<ProxyAction> {
 
     @Override
     protected List<ProxyAction> loadBeans(final int startIndex, final int count) {
-        Slice<Action> actionBeans;
+        List<ProxyAction> actionBeans;
         if (startIndex == 0) {
             if (firstPageActions == null) {
-                firstPageActions = getDeploymentManagement().findActionsByTarget(currentSelectedConrollerId,
+                firstPageActions = getDeploymentManagement().findActionsByTarget(currentSelectedControllerId,
                         new OffsetBasedPageRequest(0, SPUIDefinitions.PAGE_SIZE, sort));
             }
-            actionBeans = firstPageActions;
+            actionBeans = sortOnWeightWithMultiAssignments(firstPageActions);
         } else {
-            actionBeans = getDeploymentManagement().findActionsByTarget(currentSelectedConrollerId,
-                    new OffsetBasedPageRequest(startIndex, count, sort));
+            actionBeans = sortOnWeightWithMultiAssignments(
+                    getDeploymentManagement().findActionsByTarget(currentSelectedControllerId,
+                            new OffsetBasedPageRequest(startIndex / SPUIDefinitions.PAGE_SIZE, SPUIDefinitions.PAGE_SIZE, sort)));
         }
-        return createProxyActions(actionBeans);
+        return actionBeans;
+    }
+
+    private List<ProxyAction> sortActionsByWeight(final Slice<Action> firstPageActions) {
+        
+        final Slice<ProxyAction> weightFilledActions = fillDefaultWeightForActionsAddedInSingleAssignment(
+                firstPageActions);
+
+        final List<ProxyAction> runningActions = weightFilledActions.stream()
+                .filter(action -> Action.Status.RUNNING == action.getStatus()).collect(Collectors.toList());
+
+        Collections.sort(runningActions, Collections.reverseOrder((final ProxyAction action1,
+                final ProxyAction action2) -> action1.getWeight().compareTo(action2.getWeight())));
+
+        final List<ProxyAction> otherActions = weightFilledActions.stream()
+                .filter(action -> Action.Status.RUNNING != action.getStatus()).collect(Collectors.toList());
+        
+        runningActions.addAll(otherActions);
+
+        return runningActions;
+    }
+
+    private List<ProxyAction> sortOnWeightWithMultiAssignments(final Slice<Action> actions) {
+        return isMultiAssignmentEnabled() ? sortActionsByWeight(actions)
+                : createProxyActions(actions);
+    }
+
+    private Slice<ProxyAction> fillDefaultWeightForActionsAddedInSingleAssignment(
+            final Slice<Action> actions) {
+
+        final List<ProxyAction> finalProxyActions = new ArrayList<>();
+        for (final Action action : actions) {
+
+            // Retrieve the default weight from the Mgmt API
+            final int defaultWeight = getDeploymentManagement().getWeightConsideringDefault(action);
+
+            final ProxyAction proxyAction = createProxyActions(new SliceImpl<>(Arrays.asList(action))).get(0);
+            if (proxyAction.getWeight() == null) {
+                proxyAction.setWeight(defaultWeight);
+            }
+            finalProxyActions.add(proxyAction);
+        }
+
+        return new SliceImpl<>(finalProxyActions);
     }
 
     /**
@@ -117,7 +170,7 @@ public class ActionBeanQuery extends AbstractBeanQuery<ProxyAction> {
             proxyAction.setStatus(action.getStatus());
             proxyAction.setMaintenanceWindow(
                     action.hasMaintenanceSchedule() ? buildMaintenanceWindowDisplayText(action) : "");
-
+            proxyAction.setWeight(action.getWeight().orElse(null));
             proxyActions.add(proxyAction);
         }
         return proxyActions;
@@ -160,8 +213,8 @@ public class ActionBeanQuery extends AbstractBeanQuery<ProxyAction> {
     public int size() {
         long size = 0;
 
-        if (currentSelectedConrollerId != null) {
-            size = getDeploymentManagement().countActionsByTarget(currentSelectedConrollerId);
+        if (currentSelectedControllerId != null) {
+            size = getDeploymentManagement().countActionsByTarget(currentSelectedControllerId);
         }
         if (size > Integer.MAX_VALUE) {
             return Integer.MAX_VALUE;
@@ -182,4 +235,22 @@ public class ActionBeanQuery extends AbstractBeanQuery<ProxyAction> {
         return deploymentManagement;
     }
 
+    private TenantConfigurationManagement getTenantConfigurationManagement() {
+        if (null == configManagement) {
+            configManagement = SpringContextHelper.getBean(TenantConfigurationManagement.class);
+        }
+        return configManagement;
+    }
+
+    private SystemSecurityContext getSystemSecurityContext() {
+        if (null == systemSecurityContext) {
+            systemSecurityContext = SpringContextHelper.getBean(SystemSecurityContext.class);
+        }
+        return systemSecurityContext;
+    }
+
+    private boolean isMultiAssignmentEnabled() {
+        return getSystemSecurityContext().runAsSystem(() -> getTenantConfigurationManagement()
+                .getConfigurationValue(TenantConfigurationKey.MULTI_ASSIGNMENTS_ENABLED, Boolean.class).getValue());
+    }
 }

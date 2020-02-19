@@ -47,6 +47,7 @@ public enum ManagementUIEvent {
     //
     RESET_SIMPLE_FILTERS,
     //
-    RESET_TARGET_FILTER_QUERY
-
+    RESET_TARGET_FILTER_QUERY,
+    //
+    SAVE_TENANT_CONFIGURATION
 }

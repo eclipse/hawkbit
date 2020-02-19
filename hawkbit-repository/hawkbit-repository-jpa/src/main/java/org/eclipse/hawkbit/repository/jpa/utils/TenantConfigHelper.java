@@ -10,6 +10,8 @@ package org.eclipse.hawkbit.repository.jpa.utils;
 
 import static org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey.MULTI_ASSIGNMENTS_ENABLED;
 
+import java.io.Serializable;
+
 import org.eclipse.hawkbit.repository.TenantConfigurationManagement;
 import org.eclipse.hawkbit.security.SystemSecurityContext;
 
@@ -29,7 +31,7 @@ public final class TenantConfigHelper {
 
     /**
      * Setting the context of the tenant.
-     * 
+     *
      * @param systemSecurityContext
      *            Security context used to get the tenant and for execution
      * @param tenantConfigurationManagement
@@ -43,11 +45,21 @@ public final class TenantConfigHelper {
 
     /**
      * Is multi-assignments enabled for the current tenant
-     * 
+     *
      * @return is active
      */
     public boolean isMultiAssignmentsEnabled() {
         return systemSecurityContext.runAsSystem(() -> tenantConfigurationManagement
                 .getConfigurationValue(MULTI_ASSIGNMENTS_ENABLED, Boolean.class).getValue());
+    }
+
+    /**
+     * Returns the wanted configuration
+     *
+     * @return configuration value
+     */
+    public <T extends Serializable> T getConfigValue(final String key, final Class<T> valueType) {
+        return systemSecurityContext.runAsSystem(() -> tenantConfigurationManagement
+                .getConfigurationValue(key, valueType).getValue());
     }
 }

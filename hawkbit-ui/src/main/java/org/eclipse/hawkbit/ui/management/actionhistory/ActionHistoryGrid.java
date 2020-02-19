@@ -8,14 +8,19 @@
  */
 package org.eclipse.hawkbit.ui.management.actionhistory;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.eclipse.hawkbit.repository.DeploymentManagement;
+import org.eclipse.hawkbit.repository.TenantConfigurationManagement;
 import org.eclipse.hawkbit.repository.exception.CancelActionNotAllowedException;
 import org.eclipse.hawkbit.repository.model.Action;
 import org.eclipse.hawkbit.repository.model.Action.ActionType;
 import org.eclipse.hawkbit.repository.model.Target;
+import org.eclipse.hawkbit.security.SystemSecurityContext;
+import org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey;
 import org.eclipse.hawkbit.ui.SpPermissionChecker;
 import org.eclipse.hawkbit.ui.common.ConfirmationDialog;
 import org.eclipse.hawkbit.ui.common.grid.AbstractGrid;
@@ -86,8 +91,9 @@ public class ActionHistoryGrid extends AbstractGrid<LazyQueryContainer> {
 
     private static final Object[] minColumnOrder = new Object[] { ProxyAction.PXY_ACTION_IS_ACTIVE_DECO,
             ProxyAction.PXY_ACTION_DS_NAME_VERSION, ProxyAction.PXY_ACTION_LAST_MODIFIED_AT,
-            ProxyAction.PXY_ACTION_STATUS, ProxyAction.PXY_ACTION_MAINTENANCE_WINDOW, VIRT_PROP_TYPE,
-            VIRT_PROP_TIMEFORCED, VIRT_PROP_ACTION_CANCEL, VIRT_PROP_ACTION_FORCE, VIRT_PROP_ACTION_FORCE_QUIT };
+            ProxyAction.PXY_ACTION_STATUS, ProxyAction.PXY_ACTION_MAINTENANCE_WINDOW,
+            VIRT_PROP_TYPE, VIRT_PROP_TIMEFORCED, VIRT_PROP_ACTION_CANCEL, VIRT_PROP_ACTION_FORCE,
+            VIRT_PROP_ACTION_FORCE_QUIT };
 
     private static final String[] leftAlignedColumns = new String[] {};
 
@@ -106,16 +112,22 @@ public class ActionHistoryGrid extends AbstractGrid<LazyQueryContainer> {
 
     private final Map<Action.Status, StatusFontIcon> states;
     private final Map<IsActiveDecoration, StatusFontIcon> activeStates;
+    private final transient TenantConfigurationManagement configManagement;
+    private final transient SystemSecurityContext systemSecurityContext;
+
 
     private final BeanQueryFactory<ActionBeanQuery> targetQF = new BeanQueryFactory<>(ActionBeanQuery.class);
 
     ActionHistoryGrid(final VaadinMessageSource i18n, final DeploymentManagement deploymentManagement,
             final UIEventBus eventBus, final UINotification notification, final ManagementUIState managementUIState,
-            final SpPermissionChecker permissionChecker) {
+            final SpPermissionChecker permissionChecker, final TenantConfigurationManagement configManagement,
+            final SystemSecurityContext systemSecurityContext) {
         super(i18n, eventBus, permissionChecker);
         this.deploymentManagement = deploymentManagement;
         this.notification = notification;
         this.managementUIState = managementUIState;
+        this.configManagement = configManagement;
+        this.systemSecurityContext = systemSecurityContext;
 
         setMaximizeSupport(new ActionHistoryMaximizeSupport());
         setSingleSelectionSupport(new SingleSelectionSupport());
@@ -144,6 +156,20 @@ public class ActionHistoryGrid extends AbstractGrid<LazyQueryContainer> {
         }
         if (mgmtUIEvent == ManagementUIEvent.MIN_ACTION_HISTORY) {
             UI.getCurrent().access(this::createMinimizedContent);
+        }
+    }
+
+    @EventBusListenerMethod(scope = EventScope.UI)
+    void onSaveTenantConfigEvent(final ManagementUIEvent tenantConfigSaveEvent) {
+        if (tenantConfigSaveEvent == ManagementUIEvent.SAVE_TENANT_CONFIGURATION && isMultiAssignmentEnabled()) {
+            // call the setter methods again to initialize the weight column
+            addContainerProperties();
+            setColumnProperties();
+            setColumnHeaderNames();
+            setColumnsHidable();
+            addColumnRenderers();
+            setColumnExpandRatio();
+            setHiddenColumns();
         }
     }
 
@@ -202,6 +228,9 @@ public class ActionHistoryGrid extends AbstractGrid<LazyQueryContainer> {
         rawCont.addContainerProperty(ProxyAction.PXY_ACTION_ID, String.class, null, true, true);
         rawCont.addContainerProperty(ProxyAction.PXY_ACTION_ROLLOUT_NAME, String.class, null, true, true);
         rawCont.addContainerProperty(ProxyAction.PXY_ACTION_MAINTENANCE_WINDOW, String.class, null, true, false);
+        if (isMultiAssignmentEnabled()) {
+        rawCont.addContainerProperty(ProxyAction.PXY_ACTION_WEIGHT, Integer.class, null, true, false);
+        }
     }
 
     @Override
@@ -466,6 +495,9 @@ public class ActionHistoryGrid extends AbstractGrid<LazyQueryContainer> {
         getColumn(ProxyAction.PXY_ACTION_STATUS).setHeaderCaption(i18n.getMessage("header.status"));
         getColumn(ProxyAction.PXY_ACTION_MAINTENANCE_WINDOW)
                 .setHeaderCaption(i18n.getMessage("header.maintenancewindow"));
+        if (isMultiAssignmentEnabled()) {
+            getColumn(ProxyAction.PXY_ACTION_WEIGHT).setHeaderCaption(i18n.getMessage("header.weight"));
+        }
 
         newHeaderRow.join(VIRT_PROP_TYPE, VIRT_PROP_TIMEFORCED).setText(i18n.getMessage("label.action.type"));
         newHeaderRow.join(VIRT_PROP_ACTION_CANCEL, VIRT_PROP_ACTION_FORCE, VIRT_PROP_ACTION_FORCE_QUIT)
@@ -479,6 +511,9 @@ public class ActionHistoryGrid extends AbstractGrid<LazyQueryContainer> {
         setColumnsSize(100.0, 130.0, ProxyAction.PXY_ACTION_LAST_MODIFIED_AT);
         setColumnsSize(53.0, 55.0, ProxyAction.PXY_ACTION_STATUS);
         setColumnsSize(150.0, 200.0, ProxyAction.PXY_ACTION_MAINTENANCE_WINDOW);
+        if (isMultiAssignmentEnabled()) {
+            setColumnsSize(60.0, 80.0, ProxyAction.PXY_ACTION_WEIGHT);
+        }
         setColumnsSize(FIXED_PIX_MIN, FIXED_PIX_MIN, VIRT_PROP_TYPE, VIRT_PROP_TIMEFORCED, VIRT_PROP_ACTION_CANCEL,
                 VIRT_PROP_ACTION_FORCE, VIRT_PROP_ACTION_FORCE_QUIT);
     }
@@ -522,8 +557,16 @@ public class ActionHistoryGrid extends AbstractGrid<LazyQueryContainer> {
     @Override
     protected void setColumnProperties() {
         clearSortOrder();
+        if(isMultiAssignmentEnabled()) {
+            final ArrayList<Object> addWeightColumn = new ArrayList<>(Arrays.asList(minColumnOrder));
+            addWeightColumn.add(7, ProxyAction.PXY_ACTION_WEIGHT);
+            setColumns(addWeightColumn.toArray());
+            alignColumns();
+        }
+        else {
         setColumns(minColumnOrder);
         alignColumns();
+        }
     }
 
     /**
@@ -584,8 +627,15 @@ public class ActionHistoryGrid extends AbstractGrid<LazyQueryContainer> {
         @Override
         protected void setMaximizedColumnProperties() {
             clearSortOrder();
+            if (isMultiAssignmentEnabled()) {
+                final ArrayList<Object> addWeightColumn = new ArrayList<>(Arrays.asList(maxColumnOrder));
+                addWeightColumn.add(ProxyAction.PXY_ACTION_WEIGHT);
+                setColumns(addWeightColumn.toArray());
+                alignColumns();
+            } else {
             setColumns(maxColumnOrder);
             alignColumns();
+            }
         }
 
         @Override
@@ -764,5 +814,10 @@ public class ActionHistoryGrid extends AbstractGrid<LazyQueryContainer> {
                     new StatusFontIcon(FontAwesome.CHECK_CIRCLE, STATUS_ICON_RED, "In-active", activeStateId));
             return activeStateMap;
         }
+    }
+
+    private boolean isMultiAssignmentEnabled() {
+        return systemSecurityContext.runAsSystem(() -> configManagement
+                .getConfigurationValue(TenantConfigurationKey.MULTI_ASSIGNMENTS_ENABLED, Boolean.class).getValue());
     }
 }

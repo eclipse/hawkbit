@@ -8,16 +8,23 @@
  */
 package org.eclipse.hawkbit.ui.filtermanagement;
 
+import static org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey.MULTI_ASSIGNMENTS_WEIGHT_DEFAULT;
+
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import org.eclipse.hawkbit.repository.EntityFactory;
 import org.eclipse.hawkbit.repository.TargetFilterQueryManagement;
 import org.eclipse.hawkbit.repository.TargetManagement;
+import org.eclipse.hawkbit.repository.TenantConfigurationManagement;
 import org.eclipse.hawkbit.repository.exception.EntityNotFoundException;
 import org.eclipse.hawkbit.repository.model.Action.ActionType;
 import org.eclipse.hawkbit.repository.model.DistributionSet;
 import org.eclipse.hawkbit.repository.model.TargetFilterQuery;
+import org.eclipse.hawkbit.security.SystemSecurityContext;
+import org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey;
 import org.eclipse.hawkbit.ui.common.CommonDialogWindow;
+import org.eclipse.hawkbit.ui.common.builder.TextFieldBuilder;
 import org.eclipse.hawkbit.ui.common.builder.WindowBuilder;
 import org.eclipse.hawkbit.ui.components.SPUIComponentProvider;
 import org.eclipse.hawkbit.ui.decorators.SPUIButtonStyleNoBorderWithIcon;
@@ -33,6 +40,10 @@ import org.eclipse.hawkbit.ui.utils.VaadinMessageSource;
 import org.vaadin.spring.events.EventBus;
 import org.vaadin.spring.events.EventBus.UIEventBus;
 
+import com.vaadin.data.Validator;
+import com.vaadin.data.util.converter.StringToIntegerConverter;
+import com.vaadin.data.validator.IntegerRangeValidator;
+import com.vaadin.data.validator.NullValidator;
 import com.vaadin.server.FontAwesome;
 import com.vaadin.server.Sizeable;
 import com.vaadin.ui.Alignment;
@@ -40,6 +51,7 @@ import com.vaadin.ui.Button;
 import com.vaadin.ui.CheckBox;
 import com.vaadin.ui.HorizontalLayout;
 import com.vaadin.ui.Label;
+import com.vaadin.ui.TextField;
 import com.vaadin.ui.UI;
 import com.vaadin.ui.VerticalLayout;
 import com.vaadin.ui.Window;
@@ -56,21 +68,27 @@ public class DistributionSetSelectWindow implements CommonDialogWindow.SaveDialo
     private final TargetManagement targetManagement;
     private final TargetFilterQueryManagement targetFilterQueryManagement;
     private final EntityFactory entityFactory;
+    private final TenantConfigurationManagement configManagement;
+    private final SystemSecurityContext systemSecurityContext;
 
     private CheckBox checkBox;
     private ActionTypeOptionGroupAutoAssignmentLayout actionTypeOptionGroupLayout;
     private DistributionSetSelectComboBox dsCombo;
     private Long tfqId;
+    private TextField weight;
 
     DistributionSetSelectWindow(final VaadinMessageSource i18n, final UIEventBus eventBus,
             final UINotification notification, final TargetManagement targetManagement,
-            final TargetFilterQueryManagement targetFilterQueryManagement, final EntityFactory entityFactory) {
+            final TargetFilterQueryManagement targetFilterQueryManagement, final EntityFactory entityFactory,
+            final TenantConfigurationManagement configManagement, final SystemSecurityContext systemSecurityContext) {
         this.i18n = i18n;
         this.notification = notification;
         this.eventBus = eventBus;
         this.targetManagement = targetManagement;
         this.targetFilterQueryManagement = targetFilterQueryManagement;
         this.entityFactory = entityFactory;
+        this.configManagement = configManagement;
+        this.systemSecurityContext = systemSecurityContext;
     }
 
     private VerticalLayout initView() {
@@ -85,13 +103,39 @@ public class DistributionSetSelectWindow implements CommonDialogWindow.SaveDialo
         actionTypeOptionGroupLayout = new ActionTypeOptionGroupAutoAssignmentLayout(i18n);
         dsCombo = new DistributionSetSelectComboBox(i18n);
 
+        weight = new TextFieldBuilder(32).id(UIComponentIdProvider.DIST_SET_SELECT_WEIGHT_ID)
+                .buildTextComponent();
+        weight.setMaxLength(4);
+        weight.addValidator(new NullValidator(null, false));
+        weight.addValidator(new WeightFieldValidator());
+        weight.setConverter(new StringToIntegerConverter());
+        weight.setConversionError(i18n.getMessage("message.enter.number"));
+        weight.setCaption(i18n.getMessage(UIMessageIdProvider.HEADER_WEIGHT));
+        weight.setSizeFull();
+
         final VerticalLayout verticalLayout = new VerticalLayout();
         verticalLayout.addComponent(label);
         verticalLayout.addComponent(checkBox);
+        if (isMultiAssignmentEnabled()) {
+        verticalLayout.addComponent(weight);
+        }
         verticalLayout.addComponent(actionTypeOptionGroupLayout);
         verticalLayout.addComponent(dsCombo);
 
         return verticalLayout;
+    }
+
+    class WeightFieldValidator implements Validator {
+        private static final long serialVersionUID = 1L;
+        private static final String MESSAGE_ROLLOUT_FIELD_VALUE_RANGE = "message.rollout.field.value.range";
+
+        @Override
+        public void validate(final Object value) {
+            if (value != null) {
+                new IntegerRangeValidator(i18n.getMessage(MESSAGE_ROLLOUT_FIELD_VALUE_RANGE, 0, 1000), 0, 1000)
+                        .validate(Integer.valueOf(value.toString().replace(",", "")));
+            }
+        }
     }
 
     /**
@@ -109,8 +153,10 @@ public class DistributionSetSelectWindow implements CommonDialogWindow.SaveDialo
 
         final DistributionSet distributionSet = tfq.getAutoAssignDistributionSet();
         final ActionType actionType = tfq.getAutoAssignActionType();
+        final Optional<Integer> autoAssignWeight = tfq.getAutoAssignWeight();
 
-        setInitialControlValues(distributionSet, actionType);
+        setInitialControlValues(distributionSet, actionType,
+                autoAssignWeight.isPresent() ? autoAssignWeight.get() : null);
 
         // build window after values are set to view elements
         final CommonDialogWindow window = new WindowBuilder(SPUIDefinitions.CREATE_UPDATE_WINDOW)
@@ -123,7 +169,8 @@ public class DistributionSetSelectWindow implements CommonDialogWindow.SaveDialo
         window.setVisible(true);
     }
 
-    private void setInitialControlValues(final DistributionSet distributionSet, final ActionType actionType) {
+    private void setInitialControlValues(final DistributionSet distributionSet, final ActionType actionType,
+            final Integer autoAssignWeight) {
         checkBox.setValue(distributionSet != null);
         switchAutoAssignmentInputsVisibility(distributionSet != null);
 
@@ -145,6 +192,14 @@ public class DistributionSetSelectWindow implements CommonDialogWindow.SaveDialo
             }
         }
         dsCombo.setValue(distributionSet != null ? distributionSet.getId() : null);
+        if (isMultiAssignmentEnabled()) {
+            if (autoAssignWeight != null) {
+                weight.setValue(String.valueOf(autoAssignWeight));
+            } else {
+                weight.setValue(String.valueOf(configManagement
+                        .getConfigurationValue(MULTI_ASSIGNMENTS_WEIGHT_DEFAULT, Integer.class).getValue()));
+            }
+        }
     }
 
     private void switchAutoAssignmentInputsVisibility(final boolean autoAssignmentEnabled) {
@@ -153,6 +208,10 @@ public class DistributionSetSelectWindow implements CommonDialogWindow.SaveDialo
         dsCombo.setVisible(autoAssignmentEnabled);
         dsCombo.setEnabled(autoAssignmentEnabled);
         dsCombo.setRequired(autoAssignmentEnabled);
+
+        weight.setVisible(autoAssignmentEnabled && isMultiAssignmentEnabled());
+        weight.setEnabled(autoAssignmentEnabled && isMultiAssignmentEnabled());
+        weight.setRequired(autoAssignmentEnabled && isMultiAssignmentEnabled());
     }
 
     /**
@@ -186,19 +245,23 @@ public class DistributionSetSelectWindow implements CommonDialogWindow.SaveDialo
         if (checkBox.getValue() && dsCombo.getValue() != null) {
             final ActionType autoAssignActionType = ((ActionTypeOption) actionTypeOptionGroupLayout
                     .getActionTypeOptionGroup().getValue()).getActionType();
-            updateTargetFilterQueryDS(tfqId, (Long) dsCombo.getValue(), autoAssignActionType);
+            // check for weight field visibility which in turn checks for auto
+            // assignment and multi assignment
+            final Integer autoAssignWeight = weight.isVisible() ? Integer.valueOf(weight.getValue().replace(",", ""))
+                    : null;
+            updateTargetFilterQueryDS(tfqId, (Long) dsCombo.getValue(), autoAssignActionType, autoAssignWeight);
         } else if (!checkBox.getValue()) {
-            updateTargetFilterQueryDS(tfqId, null, null);
+            updateTargetFilterQueryDS(tfqId, null, null, null);
         }
     }
 
     private void updateTargetFilterQueryDS(final Long targetFilterQueryId, final Long dsId,
-            final ActionType actionType) {
+            final ActionType actionType, final Integer autoAssignWeight) {
         final TargetFilterQuery tfq = targetFilterQueryManagement.get(targetFilterQueryId)
                 .orElseThrow(() -> new EntityNotFoundException(TargetFilterQuery.class, targetFilterQueryId));
 
         if (dsId != null) {
-            confirmWithConsequencesDialog(tfq, dsId, actionType);
+            confirmWithConsequencesDialog(tfq, dsId, actionType, autoAssignWeight);
         } else {
             targetFilterQueryManagement.updateAutoAssignDS(
                     entityFactory.targetFilterQuery().updateAutoAssign(targetFilterQueryId).ds(null));
@@ -207,11 +270,12 @@ public class DistributionSetSelectWindow implements CommonDialogWindow.SaveDialo
     }
 
     private void confirmWithConsequencesDialog(final TargetFilterQuery tfq, final Long dsId,
-            final ActionType actionType) {
+            final ActionType actionType, final Integer autoAssignWeight) {
         final ConfirmConsequencesDialog dialog = new ConfirmConsequencesDialog(tfq, dsId, accepted -> {
             if (accepted) {
-                targetFilterQueryManagement.updateAutoAssignDS(entityFactory.targetFilterQuery()
-                        .updateAutoAssign(tfq.getId()).ds(dsId).actionType(actionType));
+                targetFilterQueryManagement
+                        .updateAutoAssignDS(entityFactory.targetFilterQuery().updateAutoAssign(tfq.getId()).ds(dsId)
+                                .actionType(actionType).weight(autoAssignWeight));
                 eventBus.publish(this, CustomFilterUIEvent.UPDATED_TARGET_FILTER_QUERY);
             }
         });
@@ -220,6 +284,11 @@ public class DistributionSetSelectWindow implements CommonDialogWindow.SaveDialo
 
         UI.getCurrent().addWindow(dialog);
         dialog.setVisible(true);
+    }
+
+    private boolean isMultiAssignmentEnabled() {
+        return systemSecurityContext.runAsSystem(() -> configManagement
+                .getConfigurationValue(TenantConfigurationKey.MULTI_ASSIGNMENTS_ENABLED, Boolean.class).getValue());
     }
 
     /**

@@ -62,6 +62,7 @@ import org.eclipse.hawkbit.ui.management.event.TargetTableEvent;
 import org.eclipse.hawkbit.ui.management.event.TargetTableEvent.TargetComponentEvent;
 import org.eclipse.hawkbit.ui.management.miscs.ActionTypeOptionGroupAssignmentLayout;
 import org.eclipse.hawkbit.ui.management.miscs.MaintenanceWindowLayout;
+import org.eclipse.hawkbit.ui.management.miscs.WeightLayout;
 import org.eclipse.hawkbit.ui.management.state.ManagementUIState;
 import org.eclipse.hawkbit.ui.management.state.TargetTableFilters;
 import org.eclipse.hawkbit.ui.push.CancelTargetAssignmentEventContainer;
@@ -127,6 +128,7 @@ public class TargetTable extends AbstractTable<Target> {
     private final UiProperties uiProperties;
     private final ActionTypeOptionGroupAssignmentLayout actionTypeOptionGroupLayout;
     private final MaintenanceWindowLayout maintenanceWindowLayout;
+    private final WeightLayout weightLayout;
 
     private Button targetPinnedBtn;
     private boolean targetPinned;
@@ -146,10 +148,11 @@ public class TargetTable extends AbstractTable<Target> {
         this.tagManagement = tagManagement;
         this.deploymentManagement = deploymentManagement;
         this.configManagement = configManagement;
+        this.systemSecurityContext = systemSecurityContext;
         this.uiProperties = uiProperties;
         this.actionTypeOptionGroupLayout = new ActionTypeOptionGroupAssignmentLayout(i18n);
         this.maintenanceWindowLayout = new MaintenanceWindowLayout(i18n);
-        this.systemSecurityContext = systemSecurityContext;
+        this.weightLayout = new WeightLayout(i18n, saveButtonToggle(), maintenanceWindowLayout);
 
         setItemDescriptionGenerator(new AssignInstalledDSTooltipGenerator());
         addNewContainerDS();
@@ -908,11 +911,16 @@ public class TargetTable extends AbstractTable<Target> {
             if (ok && isMaintenanceWindowValid(maintenanceWindowLayout, getNotification())) {
                 saveAllAssignments(Collections.singletonList(target), distributionSets, managementUIState,
                         actionTypeOptionGroupLayout, maintenanceWindowLayout, deploymentManagement, getNotification(),
-                        getEventBus(), getI18n(), this);
+                        getEventBus(), getI18n(), this, configManagement, systemSecurityContext,
+                        weightLayout.getWeightField());
             }
         }, createAssignmentTab(actionTypeOptionGroupLayout, maintenanceWindowLayout, saveButtonToggle(), getI18n(),
-                uiProperties), UIComponentIdProvider.DIST_SET_TO_TARGET_ASSIGNMENT_CONFIRM_ID);
+                uiProperties, isMultiAssignmentEnabled(), weightLayout, configManagement),
+                UIComponentIdProvider.DIST_SET_TO_TARGET_ASSIGNMENT_CONFIRM_ID);
 
+        if (isMultiAssignmentEnabled()) {
+            saveButtonToggle().accept(!isMultiAssignmentEnabled());
+        }
         UI.getCurrent().addWindow(confirmDialog.getWindow());
         confirmDialog.getWindow().bringToFront();
     }
@@ -984,5 +992,4 @@ public class TargetTable extends AbstractTable<Target> {
         return systemSecurityContext.runAsSystem(() -> configManagement
                 .getConfigurationValue(TenantConfigurationKey.MULTI_ASSIGNMENTS_ENABLED, Boolean.class).getValue());
     }
-
 }

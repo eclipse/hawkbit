@@ -42,6 +42,7 @@ import org.eclipse.hawkbit.repository.exception.EntityNotFoundException;
 import org.eclipse.hawkbit.repository.exception.ForceQuitActionNotAllowedException;
 import org.eclipse.hawkbit.repository.exception.IncompleteDistributionSetException;
 import org.eclipse.hawkbit.repository.exception.MultiAssignmentIsNotEnabledException;
+import org.eclipse.hawkbit.repository.exception.NoWeightProvidedInMultiAssignmentModeException;
 import org.eclipse.hawkbit.repository.jpa.configuration.Constants;
 import org.eclipse.hawkbit.repository.jpa.model.JpaAction;
 import org.eclipse.hawkbit.repository.jpa.model.JpaActionStatus;
@@ -165,6 +166,7 @@ public class DeploymentManagementTest extends AbstractJpaIntegrationTest {
         final int maxActions = quotaManagement.getMaxActionsPerTarget();
         final Target testTarget = testdataFactory.createTarget();
         final DistributionSet ds1 = testdataFactory.createDistributionSet("ds1");
+        final int weight = 500;
 
         enableMultiAssignments();
         for (int i = 0; i < maxActions; i++) {
@@ -173,7 +175,8 @@ public class DeploymentManagementTest extends AbstractJpaIntegrationTest {
         }
 
         assertThatExceptionOfType(AssignmentQuotaExceededException.class)
-                .isThrownBy(() -> assignDistributionSet(ds1.getId(), testTarget.getControllerId(), 77));
+                .isThrownBy(() -> assignDistributionSet(ds1.getId(),
+                        Collections.singletonList(testTarget.getControllerId()),weight));
     }
 
     @Test
@@ -732,8 +735,8 @@ public class DeploymentManagementTest extends AbstractJpaIntegrationTest {
     }
 
     @Test
-    @Description("An assignment request without a weight is ok when multi assignment in enabled.")
-    public void weightNotRequiredInMultiAssignmentMode() {
+    @Description("An assignment request without a weight will cause an error when multi assignment in enabled.")
+    public void weightIsRequiredInMultiAssignmentMode() {
         final String targetId = testdataFactory.createTarget().getControllerId();
         final Long dsId = testdataFactory.createDistributionSet().getId();
 
@@ -742,11 +745,13 @@ public class DeploymentManagementTest extends AbstractJpaIntegrationTest {
                 .build();
 
         enableMultiAssignments();
-        deploymentManagement.assignDistributionSets(Arrays.asList(assignWithoutWeight, assignWithWeight));
+        deploymentManagement.assignDistributionSets(Arrays.asList(assignWithWeight));
+        Assertions.assertThatExceptionOfType(NoWeightProvidedInMultiAssignmentModeException.class).isThrownBy(
+                () -> deploymentManagement.assignDistributionSets(Arrays.asList(assignWithoutWeight)));
     }
 
     @Test
-    @Description("An assignment request containing a weight causes an error when multi assignment in disabled.")
+    @Description("An assignment request containing a weight causes an error when multi assignment is disabled.")
     @ExpectEvents({ @Expect(type = TargetCreatedEvent.class, count = 1),
             @Expect(type = DistributionSetCreatedEvent.class, count = 1),
             @Expect(type = SoftwareModuleCreatedEvent.class, count = 3) })

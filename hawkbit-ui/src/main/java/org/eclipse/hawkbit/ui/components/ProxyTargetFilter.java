@@ -30,6 +30,7 @@ public class ProxyTargetFilter {
     private String query;
     private ProxyDistribution autoAssignDistributionSet;
     private ActionType autoAssignActionType;
+    private Integer autoAssignWeight;
 
     public String getCreatedDate() {
         return createdDate;
@@ -108,5 +109,13 @@ public class ProxyTargetFilter {
 
     public void setAutoAssignActionType(final ActionType autoAssignActionType) {
         this.autoAssignActionType = autoAssignActionType;
+    }
+
+    public Integer getAutoAssignWeight() {
+        return autoAssignWeight;
+    }
+
+    public void setAutoAssignWeight(final Integer autoAssignWeight) {
+        this.autoAssignWeight = autoAssignWeight;
     }
 }

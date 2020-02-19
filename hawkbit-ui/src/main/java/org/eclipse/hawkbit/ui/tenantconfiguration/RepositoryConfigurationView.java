@@ -1,6 +1,6 @@
 /**
  * Copyright (c) 2015 Bosch Software Innovations GmbH and others.
- *
+ * <p>
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -8,6 +8,7 @@
  */
 package org.eclipse.hawkbit.ui.tenantconfiguration;
 
+import org.eclipse.hawkbit.repository.RepositoryProperties;
 import org.eclipse.hawkbit.repository.TenantConfigurationManagement;
 import org.eclipse.hawkbit.ui.UiProperties;
 import org.eclipse.hawkbit.ui.components.SPUIComponentProvider;
@@ -26,6 +27,7 @@ import com.vaadin.ui.GridLayout;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.Link;
 import com.vaadin.ui.Panel;
+import com.vaadin.ui.TextField;
 import com.vaadin.ui.VerticalLayout;
 
 /**
@@ -55,7 +57,8 @@ public class RepositoryConfigurationView extends BaseConfigurationView
     private CheckBox multiAssignmentsCheckBox;
 
     RepositoryConfigurationView(final VaadinMessageSource i18n,
-            final TenantConfigurationManagement tenantConfigurationManagement, final UiProperties uiProperties) {
+                                final TenantConfigurationManagement tenantConfigurationManagement,
+                                final UiProperties uiProperties, final RepositoryProperties repositoryProperties) {
         this.i18n = i18n;
         this.uiProperties = uiProperties;
         this.actionAutocloseConfigurationItem = new ActionAutocloseConfigurationItem(tenantConfigurationManagement,
@@ -63,7 +66,7 @@ public class RepositoryConfigurationView extends BaseConfigurationView
         this.actionAutocleanupConfigurationItem = new ActionAutocleanupConfigurationItem(tenantConfigurationManagement,
                 i18n);
         this.multiAssignmentsConfigurationItem = new MultiAssignmentsConfigurationItem(tenantConfigurationManagement,
-                i18n);
+                i18n, uiProperties, repositoryProperties);
 
         init();
     }
@@ -108,6 +111,10 @@ public class RepositoryConfigurationView extends BaseConfigurationView
         multiAssignmentsCheckBox.setEnabled(!isMultiAssignmentsEnabled);
         multiAssignmentsConfigurationItem.setEnabled(!isMultiAssignmentsEnabled);
         multiAssignmentsConfigurationItem.addChangeListener(this);
+        multiAssignmentsConfigurationItem.getWeightTextField().addValueChangeListener(this);
+        multiAssignmentsConfigurationItem.getWeightTextField()
+                .setId(UIComponentIdProvider.REPOSITORY_MULTI_ASSIGNMENTS_WEIGHT_DEFAULT);
+
         gridLayout.addComponent(multiAssignmentsCheckBox, 0, 1);
         gridLayout.addComponent(multiAssignmentsConfigurationItem, 1, 1);
 
@@ -168,7 +175,15 @@ public class RepositoryConfigurationView extends BaseConfigurationView
     @Override
     public void valueChange(final ValueChangeEvent event) {
 
-        if (!(event.getProperty() instanceof CheckBox)) {
+        if (!(event.getProperty() instanceof CheckBox || event.getProperty() instanceof TextField)) {
+            return;
+        }
+
+        if (event.getProperty().equals(multiAssignmentsConfigurationItem.getWeightTextField())) {
+            if (multiAssignmentsConfigurationItem.isConfigEnabled()
+                    && !multiAssignmentsConfigurationItem.weightFromInputChanged()) {
+                notifyConfigurationChanged();
+            }
             return;
         }
 

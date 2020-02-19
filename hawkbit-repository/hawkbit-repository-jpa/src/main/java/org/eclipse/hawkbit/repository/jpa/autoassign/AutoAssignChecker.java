@@ -149,7 +149,7 @@ public class AutoAssignChecker {
                             targetFilterQuery.getAutoAssignWeight().orElse(null), PAGE_SIZE);
                     final int count = deploymentRequests.size();
                     if (count > 0) {
-                        deploymentManagement.assignDistributionSets(deploymentRequests, actionMessage);
+                        deploymentManagement.assignDistributionSetsAcceptNullWeight(deploymentRequests, actionMessage);
                     }
                     return count;
                 });

@@ -198,7 +198,6 @@ public abstract class AbstractFileTransferHandler implements Serializable {
 
     protected void publishUploadFailedAndFinishedEvent(final FileUploadId fileUploadId) {
         publishUploadFailedEvent(fileUploadId);
-        publishUploadFinishedEvent(fileUploadId);
     }
 
     protected void assertStateConsistency(final FileUploadId fileUploadId, final String filenameExtractedFromEvent) {

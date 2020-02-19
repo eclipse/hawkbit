@@ -136,7 +136,6 @@ public class JpaDeploymentManagement extends JpaActionManagement implements Depl
     private final OfflineDsAssignmentStrategy offlineDsAssignmentStrategy;
     private final TenantConfigurationManagement tenantConfigurationManagement;
     private final QuotaManagement quotaManagement;
-    private final SystemSecurityContext systemSecurityContext;
     private final TenantAware tenantAware;
     private final Database database;
     private final RetryTemplate retryTemplate;
@@ -149,7 +148,7 @@ public class JpaDeploymentManagement extends JpaActionManagement implements Depl
             final TenantConfigurationManagement tenantConfigurationManagement, final QuotaManagement quotaManagement,
             final SystemSecurityContext systemSecurityContext, final TenantAware tenantAware, final Database database,
             final RepositoryProperties repositoryProperties) {
-        super(actionRepository, repositoryProperties);
+        super(actionRepository, repositoryProperties, systemSecurityContext);
         this.entityManager = entityManager;
         this.distributionSetRepository = distributionSetRepository;
         this.targetRepository = targetRepository;
@@ -164,7 +163,6 @@ public class JpaDeploymentManagement extends JpaActionManagement implements Depl
                 this::isMultiAssignmentsEnabled);
         this.tenantConfigurationManagement = tenantConfigurationManagement;
         this.quotaManagement = quotaManagement;
-        this.systemSecurityContext = systemSecurityContext;
         this.tenantAware = tenantAware;
         this.database = database;
         retryTemplate = createRetryTemplate();
@@ -198,6 +196,15 @@ public class JpaDeploymentManagement extends JpaActionManagement implements Depl
             final List<DeploymentRequest> deploymentRequests, final String actionMessage) {
         WeightValidationHelper.usingContext(systemSecurityContext, tenantConfigurationManagement)
                 .validate(deploymentRequests);
+        return assignDistributionSets(deploymentRequests, actionMessage, onlineDsAssignmentStrategy);
+    }
+
+    @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public List<DistributionSetAssignmentResult> assignDistributionSetsAcceptNullWeight(
+            final List<DeploymentRequest> deploymentRequests, final String actionMessage) {
+        WeightValidationHelper.usingContext(systemSecurityContext, tenantConfigurationManagement)
+                .validateAcceptNullWeight(deploymentRequests);
         return assignDistributionSets(deploymentRequests, actionMessage, onlineDsAssignmentStrategy);
     }
 

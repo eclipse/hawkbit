@@ -17,7 +17,10 @@ import org.eclipse.hawkbit.im.authentication.SpPermission;
 import org.eclipse.hawkbit.repository.EntityFactory;
 import org.eclipse.hawkbit.repository.TargetFilterQueryManagement;
 import org.eclipse.hawkbit.repository.TargetManagement;
+import org.eclipse.hawkbit.repository.TenantConfigurationManagement;
 import org.eclipse.hawkbit.repository.model.Action.ActionType;
+import org.eclipse.hawkbit.security.SystemSecurityContext;
+import org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey;
 import org.eclipse.hawkbit.ui.SpPermissionChecker;
 import org.eclipse.hawkbit.ui.common.ConfirmationDialog;
 import org.eclipse.hawkbit.ui.components.ProxyDistribution;
@@ -26,6 +29,8 @@ import org.eclipse.hawkbit.ui.decorators.SPUIButtonStyleNoBorder;
 import org.eclipse.hawkbit.ui.decorators.SPUIButtonStyleNoBorderWithIcon;
 import org.eclipse.hawkbit.ui.filtermanagement.event.CustomFilterUIEvent;
 import org.eclipse.hawkbit.ui.filtermanagement.state.FilterManagementUIState;
+import org.eclipse.hawkbit.ui.management.event.ManagementUIEvent;
+import org.eclipse.hawkbit.ui.utils.HawkbitCommonUtil;
 import org.eclipse.hawkbit.ui.utils.SPUIDefinitions;
 import org.eclipse.hawkbit.ui.utils.SPUILabelDefinitions;
 import org.eclipse.hawkbit.ui.utils.TableColumn;
@@ -74,6 +79,10 @@ public class TargetFilterTable extends Table {
 
     private final SpPermissionChecker permChecker;
 
+    private final transient TenantConfigurationManagement configManagement;
+
+    private final transient SystemSecurityContext systemSecurityContext;
+
     private Container container;
 
     private static final int PROPERTY_DEPT = 3;
@@ -81,17 +90,19 @@ public class TargetFilterTable extends Table {
     public TargetFilterTable(final VaadinMessageSource i18n, final UINotification notification,
             final UIEventBus eventBus, final FilterManagementUIState filterManagementUIState,
             final TargetFilterQueryManagement targetFilterQueryManagement, final TargetManagement targetManagement,
-            final SpPermissionChecker permChecker, final EntityFactory entityFactory) {
+            final SpPermissionChecker permChecker, final EntityFactory entityFactory,
+            final TenantConfigurationManagement configManagement, final SystemSecurityContext systemSecurityContext) {
         this.i18n = i18n;
         this.notification = notification;
         this.eventBus = eventBus;
         this.filterManagementUIState = filterManagementUIState;
         this.targetFilterQueryManagement = targetFilterQueryManagement;
         this.permChecker = permChecker;
+        this.configManagement = configManagement;
+        this.systemSecurityContext = systemSecurityContext;
 
         this.dsSelectWindow = new DistributionSetSelectWindow(i18n, eventBus, notification, targetManagement,
-                targetFilterQueryManagement, entityFactory);
-
+                targetFilterQueryManagement, entityFactory, configManagement, systemSecurityContext);
         setStyleName("sp-table");
         setSizeFull();
         setImmediate(true);
@@ -116,12 +127,19 @@ public class TargetFilterTable extends Table {
         }
     }
 
+    @EventBusListenerMethod(scope = EventScope.UI)
+    void onSaveTenantConfigEvent(final ManagementUIEvent tenantConfigSaveEvent) {
+        if (tenantConfigSaveEvent == ManagementUIEvent.SAVE_TENANT_CONFIGURATION && isMultiAssignmentEnabled()) {
+            UI.getCurrent().access(this::refreshContainer);
+        }
+    }
+
     private Container createContainer() {
         final Map<String, Object> queryConfig = prepareQueryConfigFilters();
         final BeanQueryFactory<TargetFilterBeanQuery> targetQF = new BeanQueryFactory<>(TargetFilterBeanQuery.class);
 
         targetQF.setQueryConfiguration(queryConfig);
-        // create lazy query container with lazy defination and query
+        // create lazy query container with lazy definition and query
         final LazyQueryContainer targetFilterContainer = new LazyQueryContainer(
                 new LazyQueryDefinition(true, SPUIDefinitions.PAGE_SIZE, SPUILabelDefinitions.VAR_ID), targetQF);
         targetFilterContainer.getQueryView().getQueryDefinition().setMaxNestedPropertyDepth(PROPERTY_DEPT);
@@ -167,7 +185,6 @@ public class TargetFilterTable extends Table {
 
     private void refreshContainer() {
         populateTableData();
-
     }
 
     private Button getDeleteButton(final Long itemId) {
@@ -241,7 +258,9 @@ public class TargetFilterTable extends Table {
                 .getItemProperty(SPUILabelDefinitions.AUTO_ASSIGN_DISTRIBUTION_SET).getValue();
         final ActionType actionType = (ActionType) row1.getItemProperty(SPUILabelDefinitions.AUTO_ASSIGN_ACTION_TYPE)
                 .getValue();
-
+        final String autoAssignWeight = isMultiAssignmentEnabled()
+                ? row1.getItemProperty(SPUILabelDefinitions.AUTO_ASSIGN_WEIGHT_ID).getValue().toString()
+                : null;
         final String buttonId = "distSetButton";
         Button updateIcon;
         if (distSet == null) {
@@ -251,10 +270,12 @@ public class TargetFilterTable extends Table {
                     SPUIButtonStyleNoBorder.class);
         } else {
             updateIcon = actionType == ActionType.FORCED
-                    ? SPUIComponentProvider.getButton(buttonId, distSet.getNameVersion(),
+                    ? SPUIComponentProvider.getButton(buttonId,
+                            retrieveCustomFilterDistributionSetButtonName(autoAssignWeight, distSet),
                             i18n.getMessage(UIMessageIdProvider.BUTTON_AUTO_ASSIGNMENT_DESCRIPTION), null, false,
                             FontAwesome.BOLT, SPUIButtonStyleNoBorderWithIcon.class)
-                    : SPUIComponentProvider.getButton(buttonId, distSet.getNameVersion(),
+                    : SPUIComponentProvider.getButton(buttonId,
+                            retrieveCustomFilterDistributionSetButtonName(autoAssignWeight, distSet),
                             i18n.getMessage(UIMessageIdProvider.BUTTON_AUTO_ASSIGNMENT_DESCRIPTION), null, false, null,
                             SPUIButtonStyleNoBorder.class);
             updateIcon.setSizeUndefined();
@@ -265,6 +286,14 @@ public class TargetFilterTable extends Table {
         updateIcon.addStyleName(ValoTheme.LINK_SMALL + " " + "on-focus-no-border link");
 
         return updateIcon;
+    }
+
+    private String retrieveCustomFilterDistributionSetButtonName(final String autoAssignWeight,
+            final ProxyDistribution distSet) {
+        if (isMultiAssignmentEnabled()) {
+            return HawkbitCommonUtil.getWeightDSNameVersion(autoAssignWeight, distSet.getNameVersion());
+        }
+        return distSet.getNameVersion();
     }
 
     private void onClickOfDistributionSetButton(final ClickEvent event) {
@@ -295,7 +324,6 @@ public class TargetFilterTable extends Table {
         addContainerproperties();
         setContainerDataSource(container);
         setColumnProperties();
-
     }
 
     private static String getDetailLinkId(final String filterName) {
@@ -311,4 +339,8 @@ public class TargetFilterTable extends Table {
         }).toArray());
     }
 
+    private boolean isMultiAssignmentEnabled() {
+        return systemSecurityContext.runAsSystem(() -> configManagement
+                .getConfigurationValue(TenantConfigurationKey.MULTI_ASSIGNMENTS_ENABLED, Boolean.class).getValue());
+    }
 }

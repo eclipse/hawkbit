@@ -20,11 +20,11 @@ import javax.validation.constraints.NotNull;
 
 import org.eclipse.hawkbit.im.authentication.SpPermission.SpringEvalExpressions;
 import org.eclipse.hawkbit.repository.event.remote.TargetAssignDistributionSetEvent;
+import org.eclipse.hawkbit.repository.exception.AssignmentQuotaExceededException;
 import org.eclipse.hawkbit.repository.exception.CancelActionNotAllowedException;
 import org.eclipse.hawkbit.repository.exception.EntityNotFoundException;
 import org.eclipse.hawkbit.repository.exception.IncompleteDistributionSetException;
 import org.eclipse.hawkbit.repository.exception.MultiAssignmentIsNotEnabledException;
-import org.eclipse.hawkbit.repository.exception.AssignmentQuotaExceededException;
 import org.eclipse.hawkbit.repository.exception.RSQLParameterSyntaxException;
 import org.eclipse.hawkbit.repository.exception.RSQLParameterUnsupportedFieldException;
 import org.eclipse.hawkbit.repository.model.Action;
@@ -87,7 +87,7 @@ public interface DeploymentManagement {
      *            information about all target-ds-assignments that shall be made
      * @param actionMessage
      *            an optional message for the action status
-     * 
+     *
      * @return the list of assignment results
      *
      * @throws IncompleteDistributionSetException
@@ -104,13 +104,44 @@ public interface DeploymentManagement {
      * @throws MultiAssignmentIsNotEnabledException
      *             if the request results in multiple assignments to the same
      *             target and multiassignment is disabled
-     * 
+     *
      */
     @PreAuthorize(SpringEvalExpressions.HAS_AUTH_READ_REPOSITORY_AND_UPDATE_TARGET)
     List<DistributionSetAssignmentResult> assignDistributionSets(
             @Valid @NotEmpty List<DeploymentRequest> deploymentRequests, String actionMessage);
-            
-                /**
+
+    /**
+     * Assigns {@link DistributionSet}s to {@link Target}s according to the
+     * {@link DeploymentRequest} accepting null values as weight.
+     *
+     * @param deploymentRequests
+     *            information about all target-ds-assignments that shall be made
+     * @param actionMessage
+     *            an optional message for the action status
+     *
+     * @return the list of assignment results
+     *
+     * @throws IncompleteDistributionSetException
+     *             if mandatory {@link SoftwareModuleType} are not assigned as
+     *             defined by the {@link DistributionSetType}.
+     *
+     * @throws EntityNotFoundException
+     *             if either provided {@link DistributionSet} or {@link Target}s
+     *             do not exist
+     *
+     * @throws AssignmentQuotaExceededException
+     *             if the maximum number of targets the distribution set can be
+     *             assigned to at once is exceeded
+     * @throws MultiAssignmentIsNotEnabledException
+     *             if the request results in multiple assignments to the same
+     *             target and multiassignment is disabled
+     *
+     */
+    @PreAuthorize(SpringEvalExpressions.HAS_AUTH_READ_REPOSITORY_AND_UPDATE_TARGET)
+    List<DistributionSetAssignmentResult> assignDistributionSetsAcceptNullWeight(
+            @Valid @NotEmpty List<DeploymentRequest> deploymentRequests, String actionMessage);
+
+    /**
      * build a {@link DeploymentRequest} for a target distribution set
      * assignment
      * 

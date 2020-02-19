@@ -8,15 +8,12 @@
  */
 package org.eclipse.hawkbit.repository.jpa;
 
-import static org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey.MULTI_ASSIGNMENTS_ENABLED;
-import static org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey.REPOSITORY_ACTIONS_AUTOCLOSE_ENABLED;
-
-import java.io.Serializable;
-
 import org.eclipse.hawkbit.repository.TenantConfigurationManagement;
+import org.eclipse.hawkbit.repository.exception.MultiAssignmentIsNotEnabledException;
 import org.eclipse.hawkbit.repository.exception.TenantConfigurationValueChangeNotAllowedException;
 import org.eclipse.hawkbit.repository.jpa.configuration.Constants;
 import org.eclipse.hawkbit.repository.jpa.model.JpaTenantConfiguration;
+import org.eclipse.hawkbit.repository.model.Action;
 import org.eclipse.hawkbit.repository.model.TenantConfiguration;
 import org.eclipse.hawkbit.repository.model.TenantConfigurationValue;
 import org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties;
@@ -35,6 +32,13 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
+
+import java.io.Serializable;
+import java.time.temporal.ValueRange;
+
+import static org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey.MULTI_ASSIGNMENTS_ENABLED;
+import static org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey.MULTI_ASSIGNMENTS_WEIGHT_DEFAULT;
+import static org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey.REPOSITORY_ACTIONS_AUTOCLOSE_ENABLED;
 
 /**
  * Central tenant configuration management operations of the SP server.
@@ -135,7 +139,7 @@ public class JpaTenantConfigurationManagement implements TenantConfigurationMana
     @CacheEvict(value = "tenantConfiguration", key = "#configurationKeyName")
     @Transactional
     @Retryable(include = {
-            ConcurrencyFailureException.class }, maxAttempts = Constants.TX_RT_MAX, backoff = @Backoff(delay = Constants.TX_RT_DELAY))
+            ConcurrencyFailureException.class}, maxAttempts = Constants.TX_RT_MAX, backoff = @Backoff(delay = Constants.TX_RT_DELAY))
     public <T extends Serializable> TenantConfigurationValue<T> addOrUpdateConfiguration(
             final String configurationKeyName, final T value) {
 
@@ -177,9 +181,9 @@ public class JpaTenantConfigurationManagement implements TenantConfigurationMana
      * Asserts that the requested configuration value change is allowed. Throws
      * a {@link TenantConfigurationValueChangeNotAllowedException} otherwise.
      * 
-     * @param configurationKeyName
+     * @param key
      *            The configuration key.
-     * @param tenantConfiguration
+     * @param valueChange
      *            The configuration to be validated.
      * 
      * @throws TenantConfigurationValueChangeNotAllowedException
@@ -188,6 +192,7 @@ public class JpaTenantConfigurationManagement implements TenantConfigurationMana
     private void assertValueChangeIsAllowed(final String key, final JpaTenantConfiguration valueChange) {
         assertMultiAssignmentsValueChange(key, valueChange);
         assertAutoCloseValueChange(key, valueChange);
+        assertMultiAssignmentDefaultWeightValueChange(key, valueChange);
     }
 
     @SuppressWarnings("squid:S1172")
@@ -208,11 +213,39 @@ public class JpaTenantConfigurationManagement implements TenantConfigurationMana
         }
     }
 
+    private void assertMultiAssignmentDefaultWeightValueChange(final String key,
+            final JpaTenantConfiguration valueChange) {
+        if (MULTI_ASSIGNMENTS_WEIGHT_DEFAULT.equals(key) && isMultiAssignmentEnabled() && !validateWeight(valueChange)) {
+            LOG.debug("The value {} cannot be set.", key);
+            throw new TenantConfigurationValueChangeNotAllowedException();
+        }
+    }
+
+    private boolean isMultiAssignmentEnabled() {
+        if (getConfigurationValue(MULTI_ASSIGNMENTS_ENABLED).getValue().equals(Boolean.FALSE)) {
+            LOG.debug("Cannot proceed operation because multi assignment is disabled.");
+            throw new MultiAssignmentIsNotEnabledException();
+        }
+        return true;
+    }
+
+    private boolean validateWeight(final JpaTenantConfiguration valueChange) {
+        return ValueRange.of(Action.WEIGHT_MIN, Action.WEIGHT_MAX).isValidIntValue(validateAndParseWeight(valueChange));
+    }
+
+    private int validateAndParseWeight(final JpaTenantConfiguration valueChange) {
+        try {
+            return Integer.parseInt(valueChange.getValue());
+        } catch (NumberFormatException e) {
+            throw new TenantConfigurationValidatorException("The given configuration value is expected as a integer");
+        }
+    }
+
     @Override
     @CacheEvict(value = "tenantConfiguration", key = "#configurationKeyName")
     @Transactional
     @Retryable(include = {
-            ConcurrencyFailureException.class }, maxAttempts = Constants.TX_RT_MAX, backoff = @Backoff(delay = Constants.TX_RT_DELAY))
+            ConcurrencyFailureException.class}, maxAttempts = Constants.TX_RT_MAX, backoff = @Backoff(delay = Constants.TX_RT_DELAY))
     public void deleteConfiguration(final String configurationKeyName) {
         tenantConfigurationRepository.deleteByKey(configurationKeyName);
     }

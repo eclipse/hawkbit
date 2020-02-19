@@ -209,7 +209,7 @@ public interface TargetFilterQueryManagement {
      *             if fields are not filled as specified. Check
      *             {@link TargetFilterQueryUpdate} for field constraints.
      * 
-     * @throws QuotaExceededException
+     * @throws AssignmentQuotaExceededException
      *             if the update contains a new query which addresses too many
      *             targets (auto-assignments only)
      */

@@ -118,7 +118,8 @@
 
   ///force,soft,time forced radio button styles - start**
   .dist-window-actiontype-horz-layout {
-    padding-bottom: 15px;
+    padding-bottom: 25px;
+	padding-top: 10px;
 
     .dist-window-forcedtime {
       width: 185px;
@@ -157,6 +158,29 @@
   }
 
   //force,soft,time forced radio button styles - end
+  
+  /// weight text field styles - start ***
+ .dist-window-weightlayout {
+	vertical-align: middle;
+    horizontal-align: middle;
+    padding-left: 14px;
+}
+
+ .dist-window-weightlayout .dist-window-weight-label {
+	font-weight: 500;
+	padding-right: 10px;
+}
+
+ .dist-window-weightlayout .dist-window-weight-textfield {
+	font-size: 14px;
+	font-weight: 400;
+	width: 160px;
+	height: 24px;
+	padding-left: 5px;
+    width: 160px;
+}
+  // weight text field styles - end
+  
   //Target update window specific style, since the label '*Mandatory Field' is
   // removed, as controller id is read only********** */
   .target-update-window {
