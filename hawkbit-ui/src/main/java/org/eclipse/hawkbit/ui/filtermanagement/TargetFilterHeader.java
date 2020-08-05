@@ -92,7 +92,7 @@ public class TargetFilterHeader extends VerticalLayout {
     private void buildLayout() {
         final HorizontalLayout titleFilterIconsLayout = createHeaderFilterIconLayout();
         titleFilterIconsLayout.addComponents(headerCaption, searchField, searchResetIcon);
-        if (permissionChecker.hasCreateTargetPermission()) {
+        if (permissionChecker.hasCreateTargetFilterPermission()) {
             titleFilterIconsLayout.addComponent(createfilterButton);
             titleFilterIconsLayout.setComponentAlignment(createfilterButton, Alignment.TOP_LEFT);
         }

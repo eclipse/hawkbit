@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executor;
 
+import org.eclipse.hawkbit.dmf.hono.HonoDeviceSync;
 import org.eclipse.hawkbit.repository.DeploymentManagement;
 import org.eclipse.hawkbit.repository.DistributionSetManagement;
 import org.eclipse.hawkbit.repository.EntityFactory;
@@ -78,14 +79,16 @@ public class TargetTableHeader extends AbstractTableHeader {
 
     private final transient DistributionSetManagement distributionSetManagement;
 
+    private final transient HonoDeviceSync honoDeviceSync;
+
     TargetTableHeader(final VaadinMessageSource i18n, final SpPermissionChecker permChecker, final UIEventBus eventBus,
             final UINotification notification, final ManagementUIState managementUIState,
             final ManagementViewClientCriterion managementViewClientCriterion, final TargetManagement targetManagement,
             final DeploymentManagement deploymentManagement, final UiProperties uiproperties,
             final EntityFactory entityFactory, final UINotification uiNotification,
             final TargetTagManagement tagManagement, final DistributionSetManagement distributionSetManagement,
-            final Executor uiExecutor, final TargetTable targetTable) {
-        super(i18n, permChecker, eventBus, managementUIState, null, null);
+            final Executor uiExecutor, final TargetTable targetTable, final HonoDeviceSync honoDeviceSync) {
+        super(i18n, permChecker, eventBus, managementUIState, null, null, honoDeviceSync != null);
         this.notification = notification;
         this.managementViewClientCriterion = managementViewClientCriterion;
         this.targetAddUpdateWindow = new TargetAddUpdateWindowLayout(i18n, targetManagement, eventBus, uiNotification,
@@ -94,6 +97,7 @@ public class TargetTableHeader extends AbstractTableHeader {
                 managementUIState, deploymentManagement, uiproperties, permChecker, uiNotification, tagManagement,
                 distributionSetManagement, entityFactory, uiExecutor);
         this.distributionSetManagement = distributionSetManagement;
+        this.honoDeviceSync = honoDeviceSync;
         onLoadRestoreState();
     }
 
@@ -184,6 +188,11 @@ public class TargetTableHeader extends AbstractTableHeader {
     @Override
     protected String getAddIconId() {
         return UIComponentIdProvider.TARGET_TBL_ADD_ICON_ID;
+    }
+
+    @Override
+    protected String getSyncIconId() {
+        return UIComponentIdProvider.TARGET_TBL_SYNC_ICON_ID;
     }
 
     @Override
@@ -284,6 +293,13 @@ public class TargetTableHeader extends AbstractTableHeader {
         addTargetWindow.setCaption(i18n.getMessage("caption.create.new", i18n.getMessage("caption.target")));
         UI.getCurrent().addWindow(addTargetWindow);
         addTargetWindow.setVisible(Boolean.TRUE);
+    }
+
+    @Override
+    protected void syncHono(final ClickEvent event) {
+        event.getButton().setEnabled(false);    // Make sure there is only one synchronization process at a time.
+        honoDeviceSync.synchronize(true);
+        event.getButton().setEnabled(true);
     }
 
     @Override
@@ -433,6 +449,11 @@ public class TargetTableHeader extends AbstractTableHeader {
 
     @Override
     protected Boolean isAddNewItemAllowed() {
+        return Boolean.TRUE;
+    }
+
+    @Override
+    protected Boolean isHonoSyncAllowed() {
         return Boolean.TRUE;
     }
 }

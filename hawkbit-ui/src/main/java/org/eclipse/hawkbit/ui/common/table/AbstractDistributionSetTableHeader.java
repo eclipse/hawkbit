@@ -31,7 +31,7 @@ public abstract class AbstractDistributionSetTableHeader extends AbstractTableHe
     protected AbstractDistributionSetTableHeader(final VaadinMessageSource i18n, final SpPermissionChecker permChecker,
             final UIEventBus eventbus, final ManagementUIState managementUIState,
             final ManageDistUIState manageDistUIstate, final ArtifactUploadState artifactUploadState) {
-        super(i18n, permChecker, eventbus, managementUIState, manageDistUIstate, artifactUploadState);
+        super(i18n, permChecker, eventbus, managementUIState, manageDistUIstate, artifactUploadState, false);
     }
 
     @Override
@@ -52,6 +52,11 @@ public abstract class AbstractDistributionSetTableHeader extends AbstractTableHe
     @Override
     protected String getAddIconId() {
         return UIComponentIdProvider.DIST_ADD_ICON;
+    }
+
+    @Override
+    protected String getSyncIconId() {
+        return null;
     }
 
     @Override

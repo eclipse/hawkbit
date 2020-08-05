@@ -59,6 +59,8 @@ public abstract class AbstractTableHeader extends VerticalLayout {
 
     private Button addIcon;
 
+    private Button syncHono;
+
     private SPUIButton maxMinIcon;
 
     private HorizontalLayout filterDroppedInfo;
@@ -71,15 +73,19 @@ public abstract class AbstractTableHeader extends VerticalLayout {
 
     private final ArtifactUploadState artifactUploadState;
 
+    private final boolean honoSyncEnabled;
+
     protected AbstractTableHeader(final VaadinMessageSource i18n, final SpPermissionChecker permChecker,
             final UIEventBus eventBus, final ManagementUIState managementUIState,
-            final ManageDistUIState manageDistUIstate, final ArtifactUploadState artifactUploadState) {
+            final ManageDistUIState manageDistUIstate, final ArtifactUploadState artifactUploadState,
+            final boolean honoSyncEnabled) {
         this.i18n = i18n;
         this.permChecker = permChecker;
         this.eventBus = eventBus;
         this.managementUIState = managementUIState;
         this.manageDistUIstate = manageDistUIstate;
         this.artifactUploadState = artifactUploadState;
+        this.honoSyncEnabled = honoSyncEnabled;
         createComponents();
         buildLayout();
         restoreState();
@@ -105,6 +111,8 @@ public abstract class AbstractTableHeader extends VerticalLayout {
         searchResetIcon = createSearchResetIcon();
 
         addIcon = createAddIcon();
+
+        syncHono = createSyncHonoIcon();
 
         bulkUploadIcon = createBulkUploadIcon();
 
@@ -154,11 +162,13 @@ public abstract class AbstractTableHeader extends VerticalLayout {
 
     private void hideAddAndUploadIcon() {
         addIcon.setVisible(false);
+        syncHono.setVisible(false);
         bulkUploadIcon.setVisible(false);
     }
 
     private void showAddAndUploadIcon() {
         addIcon.setVisible(true);
+        syncHono.setVisible(true);
         bulkUploadIcon.setVisible(true);
     }
 
@@ -170,7 +180,11 @@ public abstract class AbstractTableHeader extends VerticalLayout {
         titleFilterIconsLayout.setComponentAlignment(searchField, Alignment.TOP_RIGHT);
         titleFilterIconsLayout.setComponentAlignment(searchResetIcon, Alignment.TOP_RIGHT);
         titleFilterIconsLayout.setComponentAlignment(showFilterButtonLayout, Alignment.TOP_RIGHT);
-        if (hasCreatePermission() && isAddNewItemAllowed()) {
+        if (honoSyncEnabled && isHonoSyncAllowed()) {
+            titleFilterIconsLayout.addComponent(syncHono);
+            titleFilterIconsLayout.setComponentAlignment(syncHono, Alignment.TOP_RIGHT);
+        }
+        else if (hasCreatePermission() && isAddNewItemAllowed()) {
             titleFilterIconsLayout.addComponent(addIcon);
             titleFilterIconsLayout.setComponentAlignment(addIcon, Alignment.TOP_RIGHT);
         }
@@ -234,6 +248,14 @@ public abstract class AbstractTableHeader extends VerticalLayout {
                 i18n.getMessage(UIMessageIdProvider.TOOLTIP_ADD), null, false, FontAwesome.PLUS,
                 SPUIButtonStyleNoBorder.class);
         button.addClickListener(this::addNewItem);
+        return button;
+    }
+
+    private Button createSyncHonoIcon() {
+        final Button button = SPUIComponentProvider.getButton(getSyncIconId(), "",
+                i18n.getMessage(UIMessageIdProvider.TOOLTIP_SYNC_HONO), null, false, FontAwesome.REFRESH,
+                SPUIButtonStyleNoBorder.class);
+        button.addClickListener(this::syncHono);
         return button;
     }
 
@@ -435,6 +457,14 @@ public abstract class AbstractTableHeader extends VerticalLayout {
     protected abstract Boolean isAddNewItemAllowed();
 
     /**
+     * Checks if the synchronization with Hono is allowed. Default is true.
+     *
+     * @return true if the synchronization with hono is allowed, otherwise returns
+     *         false.
+     */
+    protected abstract Boolean isHonoSyncAllowed();
+
+    /**
      * Get Id of bulk upload Icon.
      * 
      * @return String of bulk upload Icon.
@@ -486,10 +516,17 @@ public abstract class AbstractTableHeader extends VerticalLayout {
 
     /**
      * Get Id of add Icon.
-     * 
+     *
      * @return String of add Icon.
      */
     protected abstract String getAddIconId();
+
+    /**
+     * Get Id of sync Icon.
+     *
+     * @return String of sync Icon.
+     */
+    protected abstract String getSyncIconId();
 
     /**
      * Get search box on load text value.
@@ -558,6 +595,8 @@ public abstract class AbstractTableHeader extends VerticalLayout {
     protected abstract void searchBy(String newSearchText);
 
     protected abstract void addNewItem(final Button.ClickEvent event);
+
+    protected abstract void syncHono(final Button.ClickEvent event);
 
     protected ManagementUIState getManagementUIState() {
         return managementUIState;

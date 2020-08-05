@@ -103,8 +103,18 @@ public class DistributionSetTableHeader extends AbstractDistributionSetTableHead
     }
 
     @Override
+    protected void syncHono(final ClickEvent event) {
+        // do nothing
+    }
+
+    @Override
     protected Boolean isAddNewItemAllowed() {
         return Boolean.TRUE;
+    }
+
+    @Override
+    protected Boolean isHonoSyncAllowed() {
+        return Boolean.FALSE;
     }
 
 }

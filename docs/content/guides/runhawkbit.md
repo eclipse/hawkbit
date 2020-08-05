@@ -66,6 +66,54 @@ spring.rabbitmq.host=localhost
 spring.rabbitmq.port=5672
 ```
 
+### Set [Eclipse Hono](https://www.eclipse.org/hono/) as hawkBit's device registry
+
+```
+hawkbit.dmf.hono.enabled=true
+hawkbit.dmf.hono.tenant-list-uri=http://HONO_HOST/v1/tenants
+hawkbit.dmf.hono.device-list-uri=http://HONO_HOST/v1/devices/$tenantId
+hawkbit.dmf.hono.credentials-list-uri=http://HONO_HOST/v1/credentials/$tenantId/$deviceId
+```
+`$tenantId` and `$deviceId` are placeholders which will be replaced by hawkBit during the respective requests.
+
+hawkBit currently supports three different methods to authenticate with hono:
+- None (`none`; default)
+- BasicAuth (`basic`)
+- OpenID Connect (`oidc`)
+
+If you intend to use any authentication method other than `none` you must provide these additional properties: 
+
+```
+hawkbit.dmf.hono.authentication-method=oidc
+hawkbit.dmf.hono.username=USERNAME
+hawkbit.dmf.hono.password=PASSWORD
+
+// Only for authentication-method = oidc
+hawkbit.dmf.hono.oidc-token-uri=http://OIDC_HOST/auth/realms/REALM/protocol/openid-connect/token
+hawkbit.dmf.hono.oidc-client-id=OIDC_CLIENT_ID
+hawkbit.dmf.hono.oidc-client-secret=OIDC_CLIENT_SECRET # You can use a oidc client secret instead of username+password
+```
+
+hawkBit handles device registry updates through CUD events emitted by Hono over any Spring Cloud Stream supported channel, such as AMQP or Google Cloud Pub/Sub.
+
+In order to have predictable channel names use the following properties:
+```
+spring.cloud.stream.bindings.device-created.destination=device-registry.device-created
+spring.cloud.stream.bindings.device-created.group=hawkBit
+spring.cloud.stream.bindings.device-updated.destination=device-registry.device-updated
+spring.cloud.stream.bindings.device-updated.group=hawkBit
+spring.cloud.stream.bindings.device-deleted.destination=device-registry.device-deleted
+spring.cloud.stream.bindings.device-deleted.group=hawkBit
+```
+For Google Cloud Pub/Sub disable the default Maven profile `hono-amqp` and enable the profile `amqp-gcp-pubsub`.
+
+Additionally, you can specify a field of the device's extension object which will be used as the corresponding target's name:
+```
+hawkbit.dmf.hono.target-name-field=fancyFieldName
+```
+If none is specified the device's ID is used as the target's name.
+
+
 ### Adapt hostname of example scenario [creation script](https://github.com/eclipse/hawkbit-examples/blob/master/hawkbit-example-mgmt-simulator/src/main/resources/application.properties)
 
 Should only be necessary if your system does not run on localhost or uses a different port than the example app.

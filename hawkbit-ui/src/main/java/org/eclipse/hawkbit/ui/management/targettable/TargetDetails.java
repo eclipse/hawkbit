@@ -75,13 +75,16 @@ public class TargetDetails extends AbstractTableDetailsLayout<Target> {
 
     private VerticalLayout installedDistLayout;
 
+    private final boolean honoSyncEnabled;
+
     TargetDetails(final VaadinMessageSource i18n, final UIEventBus eventBus,
             final SpPermissionChecker permissionChecker, final ManagementUIState managementUIState,
             final UINotification uiNotification, final TargetTagManagement tagManagement,
             final TargetManagement targetManagement, final TargetMetadataPopupLayout targetMetadataPopupLayout,
             final DeploymentManagement deploymentManagement, final EntityFactory entityFactory,
-            final TargetTable targetTable) {
+            final TargetTable targetTable, final boolean honoSyncEnabled) {
         super(i18n, eventBus, permissionChecker, managementUIState);
+        this.honoSyncEnabled = honoSyncEnabled;
         this.targetTagToken = new TargetTagToken(permissionChecker, i18n, uiNotification, eventBus, managementUIState,
                 tagManagement, targetManagement);
         this.targetAddUpdateWindowLayout = new TargetAddUpdateWindowLayout(i18n, targetManagement, eventBus,
@@ -194,9 +197,11 @@ public class TargetDetails extends AbstractTableDetailsLayout<Target> {
         typeLabel.setId(UIComponentIdProvider.TARGET_IP_ADDRESS);
         detailsTabLayout.addComponent(typeLabel);
 
-        final HorizontalLayout securityTokenLayout = getSecurityTokenLayout(securityToken);
-        controllerLabel.setId(UIComponentIdProvider.TARGET_SECURITY_TOKEN);
-        detailsTabLayout.addComponent(securityTokenLayout);
+        if (!honoSyncEnabled) {
+            final HorizontalLayout securityTokenLayout = getSecurityTokenLayout(securityToken);
+            controllerLabel.setId(UIComponentIdProvider.TARGET_SECURITY_TOKEN);
+            detailsTabLayout.addComponent(securityTokenLayout);
+        }
     }
 
     private HorizontalLayout getSecurityTokenLayout(final String securityToken) {

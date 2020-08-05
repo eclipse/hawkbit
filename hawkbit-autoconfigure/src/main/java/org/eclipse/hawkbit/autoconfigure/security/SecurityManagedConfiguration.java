@@ -24,6 +24,7 @@ import javax.servlet.ServletResponse;
 import org.eclipse.hawkbit.cache.DownloadIdCache;
 import org.eclipse.hawkbit.ddi.rest.api.DdiRestConstants;
 import org.eclipse.hawkbit.ddi.rest.resource.DdiApiConfiguration;
+import org.eclipse.hawkbit.dmf.hono.HonoDeviceSync;
 import org.eclipse.hawkbit.im.authentication.SpPermission;
 import org.eclipse.hawkbit.im.authentication.SpPermission.SpringEvalExpressions;
 import org.eclipse.hawkbit.im.authentication.TenantUserPasswordAuthenticationToken;
@@ -40,8 +41,10 @@ import org.eclipse.hawkbit.security.HawkbitSecurityProperties;
 import org.eclipse.hawkbit.security.HttpControllerPreAuthenticateAnonymousDownloadFilter;
 import org.eclipse.hawkbit.security.HttpControllerPreAuthenticateSecurityTokenFilter;
 import org.eclipse.hawkbit.security.HttpControllerPreAuthenticatedGatewaySecurityTokenFilter;
+import org.eclipse.hawkbit.security.HttpControllerPreAuthenticatedHonoFilter;
 import org.eclipse.hawkbit.security.HttpControllerPreAuthenticatedSecurityHeaderFilter;
 import org.eclipse.hawkbit.security.HttpDownloadAuthenticationFilter;
+import org.eclipse.hawkbit.security.PreAuthHonoAuthenticationProvider;
 import org.eclipse.hawkbit.security.PreAuthTokenSourceTrustAuthenticationProvider;
 import org.eclipse.hawkbit.security.SystemSecurityContext;
 import org.eclipse.hawkbit.tenancy.TenantAware;
@@ -49,6 +52,7 @@ import org.eclipse.hawkbit.ui.MgmtUiConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -165,6 +169,9 @@ public class SecurityManagedConfiguration {
         private final HawkbitSecurityProperties securityProperties;
         private final SystemSecurityContext systemSecurityContext;
 
+        @Autowired(required = false)
+        private HonoDeviceSync honoDeviceSync;
+
         @Autowired
         ControllerSecurityConfigurationAdapter(final ControllerManagement controllerManagement,
                 final TenantConfigurationManagement tenantConfigurationManagement, final TenantAware tenantAware,
@@ -213,6 +220,17 @@ public class SecurityManagedConfiguration {
             securityHeaderFilter.setCheckForPrincipalChanges(true);
             securityHeaderFilter.setAuthenticationDetailsSource(authenticationDetailsSource);
 
+
+            HttpControllerPreAuthenticatedHonoFilter honoFilter = null;
+            if (honoDeviceSync != null) {
+                honoFilter = new HttpControllerPreAuthenticatedHonoFilter(
+                        tenantConfigurationManagement, tenantAware, controllerManagement, systemSecurityContext,
+                        honoDeviceSync);
+                honoFilter.setAuthenticationManager(authenticationManager());
+                honoFilter.setCheckForPrincipalChanges(true);
+                honoFilter.setAuthenticationDetailsSource(authenticationDetailsSource);
+            }
+
             final HttpControllerPreAuthenticateSecurityTokenFilter securityTokenFilter = new HttpControllerPreAuthenticateSecurityTokenFilter(
                     tenantConfigurationManagement, tenantAware, controllerManagement, systemSecurityContext);
             securityTokenFilter.setAuthenticationManager(authenticationManager());
@@ -244,7 +262,11 @@ public class SecurityManagedConfiguration {
                         .authenticationFilter(anonymousFilter);
             } else {
 
-                httpSec.addFilter(securityHeaderFilter).addFilter(securityTokenFilter)
+                httpSec.addFilter(securityHeaderFilter);
+                if (honoFilter != null) {
+                    httpSec.addFilter(honoFilter);
+                }
+                httpSec.addFilter(securityTokenFilter)
                         .addFilter(gatewaySecurityTokenFilter).requestMatchers().antMatchers(DDI_ANT_MATCHERS).and()
                         .anonymous().disable().authorizeRequests().anyRequest().authenticated().and()
                         .exceptionHandling()
@@ -257,6 +279,10 @@ public class SecurityManagedConfiguration {
         @Override
         protected void configure(final AuthenticationManagerBuilder auth) throws Exception {
 
+            if (honoDeviceSync != null) {
+                auth.authenticationProvider(new PreAuthHonoAuthenticationProvider(honoDeviceSync,
+                        ddiSecurityConfiguration.getRp().getTrustedIPs()));
+            }
             auth.authenticationProvider(new PreAuthTokenSourceTrustAuthenticationProvider(
                     ddiSecurityConfiguration.getRp().getTrustedIPs()));
         }
@@ -280,6 +306,9 @@ public class SecurityManagedConfiguration {
         private final DdiSecurityProperties ddiSecurityConfiguration;
         private final HawkbitSecurityProperties securityProperties;
         private final SystemSecurityContext systemSecurityContext;
+
+        @Autowired(required = false)
+        private HonoDeviceSync honoDeviceSync;
 
         @Autowired
         ControllerDownloadSecurityConfigurationAdapter(final ControllerManagement controllerManagement,
@@ -329,6 +358,16 @@ public class SecurityManagedConfiguration {
             securityHeaderFilter.setCheckForPrincipalChanges(true);
             securityHeaderFilter.setAuthenticationDetailsSource(authenticationDetailsSource);
 
+            HttpControllerPreAuthenticatedHonoFilter honoFilter = null;
+            if (honoDeviceSync != null) {
+                honoFilter = new HttpControllerPreAuthenticatedHonoFilter(
+                        tenantConfigurationManagement, tenantAware, controllerManagement, systemSecurityContext,
+                        honoDeviceSync);
+                honoFilter.setAuthenticationManager(authenticationManager());
+                honoFilter.setCheckForPrincipalChanges(true);
+                honoFilter.setAuthenticationDetailsSource(authenticationDetailsSource);
+            }
+
             final HttpControllerPreAuthenticateSecurityTokenFilter securityTokenFilter = new HttpControllerPreAuthenticateSecurityTokenFilter(
                     tenantConfigurationManagement, tenantAware, controllerManagement, systemSecurityContext);
             securityTokenFilter.setAuthenticationManager(authenticationManager());
@@ -366,7 +405,11 @@ public class SecurityManagedConfiguration {
                         .authenticationFilter(anonymousFilter);
             } else {
 
-                httpSec.addFilter(securityHeaderFilter).addFilter(securityTokenFilter)
+                httpSec.addFilter(securityHeaderFilter);
+                if (honoFilter != null) {
+                    httpSec.addFilter(honoFilter);
+                }
+                httpSec.addFilter(securityTokenFilter)
                         .addFilter(gatewaySecurityTokenFilter).addFilter(controllerAnonymousDownloadFilter)
                         .requestMatchers().antMatchers(DDI_DL_ANT_MATCHER).and().anonymous().disable()
                         .authorizeRequests().anyRequest().authenticated().and().exceptionHandling()
@@ -379,6 +422,10 @@ public class SecurityManagedConfiguration {
         @Override
         protected void configure(final AuthenticationManagerBuilder auth) throws Exception {
 
+            if (honoDeviceSync != null) {
+                auth.authenticationProvider(new PreAuthHonoAuthenticationProvider(honoDeviceSync,
+                        ddiSecurityConfiguration.getRp().getTrustedIPs()));
+            }
             auth.authenticationProvider(new PreAuthTokenSourceTrustAuthenticationProvider(
                     ddiSecurityConfiguration.getRp().getTrustedIPs()));
         }
@@ -435,6 +482,9 @@ public class SecurityManagedConfiguration {
         @Autowired
         private DownloadIdCache downloadIdCache;
 
+        @Autowired(required = false)
+        private HonoDeviceSync honoDeviceSync;
+
         @Override
         protected void configure(final HttpSecurity http) throws Exception {
 
@@ -453,6 +503,10 @@ public class SecurityManagedConfiguration {
 
         @Override
         protected void configure(final AuthenticationManagerBuilder auth) throws Exception {
+            if (honoDeviceSync != null) {
+                auth.authenticationProvider(new PreAuthHonoAuthenticationProvider(honoDeviceSync,
+                        ddiSecurityConfiguration.getRp().getTrustedIPs()));
+            }
             auth.authenticationProvider(new PreAuthTokenSourceTrustAuthenticationProvider(
                     ddiSecurityConfiguration.getRp().getTrustedIPs()));
         }

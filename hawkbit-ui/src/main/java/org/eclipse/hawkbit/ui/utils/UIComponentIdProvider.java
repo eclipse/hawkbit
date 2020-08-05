@@ -644,6 +644,11 @@ public final class UIComponentIdProvider {
     public static final String TARGET_TBL_ADD_ICON_ID = "target.add";
 
     /**
+     * Id of the target table sync Icon.
+     */
+    public static final String TARGET_TBL_SYNC_ICON_ID = "target.sync";
+
+    /**
      * Id of IP address label in target details.
      */
     public static final String TARGET_IP_ADDRESS = "target.ip.address";

@@ -37,7 +37,7 @@ public abstract class AbstractSoftwareModuleTableHeader extends AbstractTableHea
             final UIEventBus eventbus, final ManagementUIState managementUIState,
             final ManageDistUIState manageDistUIstate, final ArtifactUploadState artifactUploadState,
             final SoftwareModuleAddUpdateWindow softwareModuleAddUpdateWindow) {
-        super(i18n, permChecker, eventbus, managementUIState, manageDistUIstate, artifactUploadState);
+        super(i18n, permChecker, eventbus, managementUIState, manageDistUIstate, artifactUploadState, false);
         this.softwareModuleAddUpdateWindow = softwareModuleAddUpdateWindow;
     }
 
@@ -62,6 +62,11 @@ public abstract class AbstractSoftwareModuleTableHeader extends AbstractTableHea
     }
 
     @Override
+    protected String getSyncIconId() {
+        return null;
+    }
+
+    @Override
     protected String getShowFilterButtonLayoutId() {
         return "show.type.icon";
     }
@@ -77,11 +82,21 @@ public abstract class AbstractSoftwareModuleTableHeader extends AbstractTableHea
     }
 
     @Override
+    protected Boolean isHonoSyncAllowed() {
+        return Boolean.FALSE;
+    }
+
+    @Override
     protected void addNewItem(final ClickEvent event) {
         final Window addSoftwareModule = softwareModuleAddUpdateWindow.createAddSoftwareModuleWindow();
         addSoftwareModule.setCaption(i18n.getMessage("caption.create.new", i18n.getMessage("caption.software.module")));
         UI.getCurrent().addWindow(addSoftwareModule);
         addSoftwareModule.setVisible(Boolean.TRUE);
+    }
+
+    @Override
+    protected void syncHono(final ClickEvent event) {
+        // do nothing
     }
 
     @Override

@@ -46,7 +46,7 @@ public class SpPermissionChecker implements Serializable {
 
     /**
      * Gets the create Target Permission.
-     * 
+     *
      * @return READ_TARGET boolean value
      */
     public boolean hasCreateTargetPermission() {
@@ -55,7 +55,7 @@ public class SpPermissionChecker implements Serializable {
 
     /**
      * Gets the update Target Permission.
-     * 
+     *
      * @return READ_TARGET boolean value
      */
     public boolean hasUpdateTargetPermission() {
@@ -64,11 +64,38 @@ public class SpPermissionChecker implements Serializable {
 
     /**
      * Gets the delete Target Permission.
-     * 
+     *
      * @return READ_TARGET boolean value
      */
     public boolean hasDeleteTargetPermission() {
         return hasTargetReadPermission() && permissionService.hasPermission(SpPermission.DELETE_TARGET);
+    }
+
+    /**
+     * Gets the create Target Filter Permission.
+     *
+     * @return CREATE_TARGET_FILTER boolean value
+     */
+    public boolean hasCreateTargetFilterPermission() {
+        return hasTargetReadPermission() && permissionService.hasPermission(SpPermission.CREATE_TARGET_FILTER);
+    }
+
+    /**
+     * Gets the delete Target Filter Permission.
+     *
+     * @return UPDATE_TARGET_FILTER boolean value
+     */
+    public boolean hasUpdateTargetFilterPermission() {
+        return hasTargetReadPermission() && permissionService.hasPermission(SpPermission.UPDATE_TARGET_FILTER);
+    }
+
+    /**
+     * Gets the delete Target Filter Permission.
+     *
+     * @return DELETE_TARGET_FILTER boolean value
+     */
+    public boolean hasDeleteTargetFilterPermission() {
+        return hasTargetReadPermission() && permissionService.hasPermission(SpPermission.DELETE_TARGET_FILTER);
     }
 
     /**

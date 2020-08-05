@@ -143,7 +143,7 @@ public class PreAuthTokenSourceTrustAuthenticationProvider implements Authentica
         return successAuthentication;
     }
 
-    private boolean checkSourceIPAddressIfNeccessary(final Object tokenDetails) {
+    boolean checkSourceIPAddressIfNeccessary(final Object tokenDetails) {
         boolean success = authorizedSourceIps == null;
         String remoteAddress = null;
         // controllerIds in URL path and request header are the same but is the

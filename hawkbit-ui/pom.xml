@@ -169,6 +169,11 @@
          <version>${project.version}</version>
       </dependency>
       <dependency>
+         <groupId>org.eclipse.hawkbit</groupId>
+         <artifactId>hawkbit-dmf-hono</artifactId>
+         <version>${project.version}</version>
+      </dependency>
+      <dependency>
          <groupId>commons-io</groupId>
          <artifactId>commons-io</artifactId>
       </dependency>

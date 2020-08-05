@@ -396,9 +396,9 @@ public class CreateOrUpdateFilterHeader extends VerticalLayout implements Button
 
     private boolean hasSavePermission() {
         if (filterManagementUIState.isCreateFilterViewDisplayed()) {
-            return permissionChecker.hasCreateTargetPermission();
+            return permissionChecker.hasCreateTargetFilterPermission();
         } else {
-            return permissionChecker.hasUpdateTargetPermission();
+            return permissionChecker.hasUpdateTargetFilterPermission();
         }
     }
 

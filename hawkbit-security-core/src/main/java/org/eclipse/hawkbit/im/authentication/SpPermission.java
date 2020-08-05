@@ -68,7 +68,7 @@ public final class SpPermission {
     /**
      * Permission to add new targets to the {@link ProvisioningTargetRepository}
      * including their meta information and or/relations or
-     * {@link DistributionSet} assignment.That corresponds in REST API to PUT.
+     * {@link DistributionSet} assignment. That corresponds in REST API to PUT.
      */
     public static final String CREATE_TARGET = "CREATE_TARGET";
 
@@ -79,6 +79,24 @@ public final class SpPermission {
      * corresponds in REST API to DELETE.
      */
     public static final String DELETE_TARGET = "DELETE_TARGET";
+
+    /**
+     * Permission to add new target filters to the {@link ProvisioningTargetRepository}
+     * That corresponds in REST API to PUT.
+     */
+    public static final String UPDATE_TARGET_FILTER = "UPDATE_TARGET_FILTER";
+
+    /**
+     * Permission to add new target filters to the {@link ProvisioningTargetRepository}
+     * That corresponds in REST API to POST.
+     */
+    public static final String CREATE_TARGET_FILTER = "CREATE_TARGET_FILTER";
+
+    /**
+     * Permission to delete target filters in the {@link ProvisioningTargetRepository},
+     * That corresponds in REST API to DELETE.
+     */
+    public static final String DELETE_TARGET_FILTER = "DELETE_TARGET_FILTER";
 
     /**
      * Permission to read {@link DistributionSet}s and/or {@link OsPackage}s.
@@ -289,6 +307,30 @@ public final class SpPermission {
          */
         public static final String HAS_AUTH_DELETE_TARGET = HAS_AUTH_PREFIX + DELETE_TARGET + HAS_AUTH_SUFFIX
                 + HAS_AUTH_OR + IS_SYSTEM_CODE;
+
+        /**
+         * Spring security eval hasAuthority expression to check if spring
+         * context contains {@link SpPermission#CREATE_TARGET_FILTER} or
+         * {@link #IS_SYSTEM_CODE}.
+         */
+        public static final String HAS_AUTH_CREATE_TARGET_FILTER = HAS_AUTH_PREFIX + CREATE_TARGET_FILTER
+                + HAS_AUTH_SUFFIX + HAS_AUTH_OR + IS_SYSTEM_CODE;
+
+        /**
+         * Spring security eval hasAuthority expression to check if spring
+         * context contains {@link SpPermission#UPDATE_TARGET_FILTER} or
+         * {@link #IS_SYSTEM_CODE}.
+         */
+        public static final String HAS_AUTH_UPDATE_TARGET_FILTER = HAS_AUTH_PREFIX + UPDATE_TARGET_FILTER
+                + HAS_AUTH_SUFFIX + HAS_AUTH_OR + IS_SYSTEM_CODE;
+
+        /**
+         * Spring security eval hasAuthority expression to check if spring
+         * context contains {@link SpPermission#DELETE_TARGET_FILTER} or
+         * {@link #IS_SYSTEM_CODE}.
+         */
+        public static final String HAS_AUTH_DELETE_TARGET_FILTER = HAS_AUTH_PREFIX + DELETE_TARGET_FILTER
+                + HAS_AUTH_SUFFIX + HAS_AUTH_OR + IS_SYSTEM_CODE;
 
         /**
          * Spring security eval hasAuthority expression to check if spring

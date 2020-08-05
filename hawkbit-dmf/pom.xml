@@ -23,6 +23,7 @@
    <modules>
       <module>hawkbit-dmf-api</module>
       <module>hawkbit-dmf-amqp</module>
+      <module>hawkbit-dmf-hono</module>
       <module>hawkbit-dmf-rabbitmq-test</module>
    </modules>
 

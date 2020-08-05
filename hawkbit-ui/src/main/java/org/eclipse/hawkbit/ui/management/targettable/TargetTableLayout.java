@@ -10,6 +10,7 @@ package org.eclipse.hawkbit.ui.management.targettable;
 
 import java.util.concurrent.Executor;
 
+import org.eclipse.hawkbit.dmf.hono.HonoDeviceSync;
 import org.eclipse.hawkbit.repository.DeploymentManagement;
 import org.eclipse.hawkbit.repository.DistributionSetManagement;
 import org.eclipse.hawkbit.repository.EntityFactory;
@@ -42,16 +43,17 @@ public class TargetTableLayout extends AbstractTableLayout<TargetTable> {
             final ManagementViewClientCriterion managementViewClientCriterion,
             final DeploymentManagement deploymentManagement, final UiProperties uiProperties,
             final SpPermissionChecker permissionChecker, final TargetTagManagement tagManagement,
-            final DistributionSetManagement distributionSetManagement, final Executor uiExecutor) {
+            final DistributionSetManagement distributionSetManagement, final Executor uiExecutor,
+            final HonoDeviceSync honoDeviceSync) {
         final TargetMetadataPopupLayout targetMetadataPopupLayout = new TargetMetadataPopupLayout(i18n, uiNotification,
                 eventBus, targetManagement, entityFactory, permissionChecker);
         this.eventBus = eventBus;
         TargetDetails targetDetails = new TargetDetails(i18n, eventBus, permissionChecker, managementUIState, uiNotification,
                 tagManagement, targetManagement, targetMetadataPopupLayout, deploymentManagement, entityFactory,
-                targetTable);
+                targetTable, honoDeviceSync != null);
         TargetTableHeader targetTableHeader = new TargetTableHeader(i18n, permissionChecker, eventBus, uiNotification,
                 managementUIState, managementViewClientCriterion, targetManagement, deploymentManagement, uiProperties,
-                entityFactory, uiNotification, tagManagement, distributionSetManagement, uiExecutor, targetTable);
+                entityFactory, uiNotification, tagManagement, distributionSetManagement, uiExecutor, targetTable, honoDeviceSync);
 
         super.init(i18n, targetTableHeader, targetTable, targetDetails);
     }

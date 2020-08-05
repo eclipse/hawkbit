@@ -9,10 +9,12 @@
 package org.eclipse.hawkbit.ui.management;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 
 import javax.annotation.PostConstruct;
 
+import org.eclipse.hawkbit.dmf.hono.HonoDeviceSync;
 import org.eclipse.hawkbit.repository.DeploymentManagement;
 import org.eclipse.hawkbit.repository.DistributionSetManagement;
 import org.eclipse.hawkbit.repository.DistributionSetTagManagement;
@@ -131,7 +133,8 @@ public class DeploymentView extends AbstractNotificationView implements BrowserW
             final TargetFilterQueryManagement targetFilterQueryManagement, final SystemManagement systemManagement,
             final TenantConfigurationManagement configManagement, final SystemSecurityContext systemSecurityContext,
             final NotificationUnreadButton notificationUnreadButton,
-            final DeploymentViewMenuItem deploymentViewMenuItem, @Qualifier("uiExecutor") final Executor uiExecutor) {
+            final DeploymentViewMenuItem deploymentViewMenuItem, @Qualifier("uiExecutor") final Executor uiExecutor,
+            final Optional<HonoDeviceSync> honoDeviceSync) {
         super(eventBus, notificationUnreadButton);
         this.permChecker = permChecker;
         this.i18n = i18n;
@@ -150,13 +153,14 @@ public class DeploymentView extends AbstractNotificationView implements BrowserW
                     targetFilterQueryManagement, targetTagManagement);
             final TargetTable targetTable = new TargetTable(eventBus, i18n, uiNotification, targetManagement,
                     managementUIState, permChecker, managementViewClientCriterion, distributionSetManagement,
-                    targetTagManagement, deploymentManagement, configManagement, systemSecurityContext, uiProperties);
+                    targetTagManagement, deploymentManagement, configManagement, systemSecurityContext, uiProperties,
+                    honoDeviceSync.isPresent());
             this.countMessageLabel = new CountMessageLabel(eventBus, targetManagement, i18n, managementUIState,
                     targetTable);
 
             this.targetTableLayout = new TargetTableLayout(eventBus, targetTable, targetManagement, entityFactory, i18n,
                     uiNotification, managementUIState, managementViewClientCriterion, deploymentManagement,
-                    uiProperties, permChecker, targetTagManagement, distributionSetManagement, uiExecutor);
+                    uiProperties, permChecker, targetTagManagement, distributionSetManagement, uiExecutor, honoDeviceSync.orElse(null));
 
             actionHistoryLayout.registerDetails(((ActionStatusGrid) actionStatusLayout.getGrid()).getDetailsSupport());
             actionStatusLayout

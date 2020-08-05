@@ -8,8 +8,7 @@
  */
 package org.eclipse.hawkbit.im.authentication;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -21,6 +20,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
  *
  */
 public class PermissionService {
+
+    private boolean honoSyncEnabled = false;
+    private final List<String> disabledPermissionsByUsingHono = Arrays.asList(SpPermission.CREATE_TARGET, SpPermission.DELETE_TARGET);
 
     /**
      * Checks if the given {@code permission} contains in the. In case no
@@ -39,6 +41,10 @@ public class PermissionService {
         }
         final Authentication authentication = context.getAuthentication();
         if (authentication == null) {
+            return false;
+        }
+
+        if (honoSyncEnabled && disabledPermissionsByUsingHono.contains(permission)) {
             return false;
         }
 
@@ -100,4 +106,7 @@ public class PermissionService {
         return false;
     }
 
+    public void setHonoSyncEnabled(boolean honoSyncEnabled) {
+        this.honoSyncEnabled = honoSyncEnabled;
+    }
 }

@@ -4,6 +4,7 @@ org.eclipse.hawkbit.autoconfigure.cache.CacheAutoConfiguration,\
 org.eclipse.hawkbit.autoconfigure.cache.DownloadIdCacheAutoConfiguration,\
 org.eclipse.hawkbit.autoconfigure.ddi.DDiApiAutoConfiguration,\
 org.eclipse.hawkbit.autoconfigure.dmf.amqp.DmfApiAutoConfiguration,\
+org.eclipse.hawkbit.autoconfigure.dmf.hono.DmfHonoAutoConfiguration,\
 org.eclipse.hawkbit.autoconfigure.mgmt.ui.MgmtUiAutoConfiguration,\
 org.eclipse.hawkbit.autoconfigure.mgmt.MgmtApiAutoConfiguration,\
 org.eclipse.hawkbit.autoconfigure.repository.event.EventPublisherAutoConfiguration,\

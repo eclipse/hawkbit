@@ -132,12 +132,15 @@ public class TargetTable extends AbstractTable<Target> {
     private boolean targetPinned;
     private ConfirmationDialog confirmDialog;
 
+    private final boolean honoSyncEnabled;
+
     public TargetTable(final UIEventBus eventBus, final VaadinMessageSource i18n, final UINotification notification,
             final TargetManagement targetManagement, final ManagementUIState managementUIState,
             final SpPermissionChecker permChecker, final ManagementViewClientCriterion managementViewClientCriterion,
             final DistributionSetManagement distributionSetManagement, final TargetTagManagement tagManagement,
             final DeploymentManagement deploymentManagement, final TenantConfigurationManagement configManagement,
-            final SystemSecurityContext systemSecurityContext, final UiProperties uiProperties) {
+            final SystemSecurityContext systemSecurityContext, final UiProperties uiProperties,
+            final boolean honoSyncEnabled) {
         super(eventBus, i18n, notification, permChecker);
         this.targetManagement = targetManagement;
         this.managementViewClientCriterion = managementViewClientCriterion;
@@ -150,6 +153,7 @@ public class TargetTable extends AbstractTable<Target> {
         this.actionTypeOptionGroupLayout = new ActionTypeOptionGroupAssignmentLayout(i18n);
         this.maintenanceWindowLayout = new MaintenanceWindowLayout(i18n);
         this.systemSecurityContext = systemSecurityContext;
+        this.honoSyncEnabled = honoSyncEnabled;
 
         setItemDescriptionGenerator(new AssignInstalledDSTooltipGenerator());
         addNewContainerDS();
@@ -971,7 +975,7 @@ public class TargetTable extends AbstractTable<Target> {
 
     @Override
     protected boolean hasDeletePermission() {
-        return getPermChecker().hasDeleteTargetPermission();
+        return !honoSyncEnabled && getPermChecker().hasDeleteTargetPermission();
     }
 
     @Override

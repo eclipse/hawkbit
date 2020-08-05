@@ -63,6 +63,14 @@ public final class HeaderAuthentication {
         return true;
     }
 
+    public String getControllerId() {
+        return controllerId;
+    }
+
+    public String getHeaderAuth() {
+        return headerAuth;
+    }
+
     @Override
     public String toString() {
         // only the controller ID because the principal is stored as string for
