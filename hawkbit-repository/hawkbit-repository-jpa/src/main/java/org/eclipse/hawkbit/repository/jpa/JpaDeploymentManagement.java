@@ -188,6 +188,25 @@ public class JpaDeploymentManagement extends JpaActionManagement implements Depl
 
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
+    public DistributionSetAssignmentResult assignDistributionSet(Target target,
+            DeploymentRequest deploymentRequest, String actionMessage){
+        return assignDistributionSet(target, deploymentRequest, actionMessage, onlineDsAssignmentStrategy);
+    }
+
+    private DistributionSetAssignmentResult assignDistributionSet(Target target,
+            final DeploymentRequest deploymentRequest,
+            final String actionMessage, AbstractDsAssignmentStrategy strategy) {
+
+        DistributionSetAssignmentResult result = assignDistributionSetToSingleTargetWithRetry(target,
+                deploymentRequest.getDistributionSetId(), deploymentRequest.getTargetWithActionType(),
+                actionMessage, onlineDsAssignmentStrategy);
+
+        strategy.sendDeploymentEvents(result);
+        return result;
+    }
+
+    @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public List<DistributionSetAssignmentResult> assignDistributionSets(
             final List<DeploymentRequest> deploymentRequests) {
         return assignDistributionSets(tenantAware.getCurrentUsername(), deploymentRequests, null);
@@ -237,6 +256,14 @@ public class JpaDeploymentManagement extends JpaActionManagement implements Depl
         if (distinctTargetsInRequest < deploymentRequests.size()) {
             throw new MultiAssignmentIsNotEnabledException();
         }
+    }
+
+    private DistributionSetAssignmentResult assignDistributionSetToSingleTargetWithRetry(Target target, final Long dsID,
+            final TargetWithActionType targetWithActionType, final String actionMessage,
+            final AbstractDsAssignmentStrategy assignmentStrategy) {
+        final RetryCallback<DistributionSetAssignmentResult, ConcurrencyFailureException> retryCallback = retryContext -> assignDistributionSetToSingleTarget(
+                target, dsID, targetWithActionType, actionMessage, assignmentStrategy);
+        return retryTemplate.execute(retryCallback);
     }
 
     private DistributionSetAssignmentResult assignDistributionSetToTargetsWithRetry(final String initiatedBy, final Long dsID,
@@ -305,6 +332,22 @@ public class JpaDeploymentManagement extends JpaActionManagement implements Depl
         return buildAssignmentResult(distributionSetEntity, assignedActions, existingTargetsWithActionType.size());
     }
 
+    private DistributionSetAssignmentResult assignDistributionSetToSingleTarget(Target target, final Long dsID,
+            final TargetWithActionType targetWithActionType, final String actionMessage,
+            final AbstractDsAssignmentStrategy assignmentStrategy) {
+
+        final JpaDistributionSet distributionSet = getAndValidateDsById(dsID);
+
+        if(assignmentStrategy.actionHistoryContainsAssignment(target, distributionSet)) {
+            return allTargetsAlreadyAssignedResult(distributionSet, 1);
+        }
+
+        final List<JpaAction> assignedActions = doAssignDistributionSetToSingleTarget(targetWithActionType,
+                actionMessage, assignmentStrategy, distributionSet, target);
+
+        return buildAssignmentResult(distributionSet, assignedActions, 1);
+    }
+
     private DistributionSetAssignmentResult allTargetsAlreadyAssignedResult(
             final JpaDistributionSet distributionSetEntity, final int alreadyAssignedCount) {
         // detaching as it is not necessary to persist the set itself
@@ -312,6 +355,30 @@ public class JpaDeploymentManagement extends JpaActionManagement implements Depl
         // return with nothing as all targets had the DS already assigned
         return new DistributionSetAssignmentResult(distributionSetEntity, alreadyAssignedCount,
                 Collections.emptyList());
+    }
+
+    private List<JpaAction> doAssignDistributionSetToSingleTarget(TargetWithActionType targetWithActionType,
+            String actionMessage, AbstractDsAssignmentStrategy strategy, JpaDistributionSet distributionSet, Target target){
+
+
+        if (!isMultiAssignmentsEnabled()) {
+            closeOrCancelActiveActions(strategy, target.getId());
+        }
+
+        cancelInactiveScheduledActionsForTargets(Collections.singletonList(target.getId()));
+
+        setAssignedDistributionSetAndTargetUpdateStatus(strategy, distributionSet, target.getId());
+
+        final List<JpaAction> assignedActions = createActions(
+                "AutoAssignment",
+                Collections.singletonList(targetWithActionType),
+                Collections.singletonList((JpaTarget)target),
+                strategy, distributionSet);
+
+        createActionsStatus(assignedActions, strategy, actionMessage);
+
+        detachEntitiesAndSendTargetUpdatedEvents(distributionSet, Collections.singletonList((JpaTarget) target), strategy);
+        return assignedActions;
     }
 
     private List<JpaAction> doAssignDistributionSetToTargets(final String initiatedBy,
@@ -395,6 +462,15 @@ public class JpaDeploymentManagement extends JpaActionManagement implements Depl
     }
 
     private void closeOrCancelActiveActions(final AbstractDsAssignmentStrategy assignmentStrategy,
+            final Long targetId) {
+        if (isActionsAutocloseEnabled()) {
+            assignmentStrategy.closeActiveActions(targetId);
+        } else {
+            assignmentStrategy.cancelActiveActions(targetId);
+        }
+    }
+
+    private void closeOrCancelActiveActions(final AbstractDsAssignmentStrategy assignmentStrategy,
             final List<List<Long>> targetIdsChunks) {
         if (isActionsAutocloseEnabled()) {
             assignmentStrategy.closeActiveActions(targetIdsChunks);
@@ -413,6 +489,12 @@ public class JpaDeploymentManagement extends JpaActionManagement implements Depl
         } else {
             LOG.debug("The Multi Assignments feature is enabled: No need to cancel inactive scheduled actions.");
         }
+    }
+
+    private void setAssignedDistributionSetAndTargetUpdateStatus(final AbstractDsAssignmentStrategy assignmentStrategy,
+            final DistributionSet set, final Long targetId) {
+        final String currentUser = auditorProvider.getCurrentAuditor().orElse(null);
+        assignmentStrategy.setAssignedDistributionSetAndTargetStatus(set, targetId, currentUser);
     }
 
     private void setAssignedDistributionSetAndTargetUpdateStatus(final AbstractDsAssignmentStrategy assignmentStrategy,

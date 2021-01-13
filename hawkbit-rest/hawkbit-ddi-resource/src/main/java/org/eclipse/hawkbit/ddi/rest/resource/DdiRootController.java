@@ -458,6 +458,9 @@ public class DdiRootController implements DdiRootControllerRestApi {
             @PathVariable("tenant") final String tenant, @PathVariable("controllerId") final String controllerId) {
 
         controllerManagement.updateControllerAttributes(controllerId, configData.getData(), getUpdateMode(configData));
+
+        controllerManagement.triggerDistributionSetAssignmentCheck(controllerId);
+
         return ResponseEntity.ok().build();
     }
 

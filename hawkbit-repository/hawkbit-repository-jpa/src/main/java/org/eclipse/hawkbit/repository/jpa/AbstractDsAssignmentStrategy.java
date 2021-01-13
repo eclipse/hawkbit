@@ -35,6 +35,8 @@ import org.eclipse.hawkbit.repository.model.TargetWithActionType;
 import org.eclipse.hawkbit.repository.model.helper.EventPublisherHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 /**
  * {@link DistributionSet} to {@link Target} assignment strategy as utility for
@@ -97,6 +99,7 @@ public abstract class AbstractDsAssignmentStrategy {
     abstract void setAssignedDistributionSetAndTargetStatus(final JpaDistributionSet distributionSet,
             final List<List<Long>> targetIds, final String currentUser);
 
+    abstract void setAssignedDistributionSetAndTargetStatus(final DistributionSet dSet, final Long targetId, final String currentUser);
     /**
      * Cancels actions that can be canceled (i.e.
      * {@link DistributionSet#isRequiredMigrationStep() is <code>false</code>})
@@ -119,6 +122,10 @@ public abstract class AbstractDsAssignmentStrategy {
      *            to cancel actions for
      */
     abstract void closeActiveActions(List<List<Long>> targetIds);
+
+    abstract void closeActiveActions(final Long targetId);
+
+    abstract void cancelActiveActions(final Long targetId);
 
     abstract void sendDeploymentEvents(final DistributionSetAssignmentResult assignmentResult);
 
@@ -243,6 +250,13 @@ public abstract class AbstractDsAssignmentStrategy {
         final int quota = quotaManagement.getMaxActionsPerTarget();
         QuotaHelper.assertAssignmentQuota(target.getId(), requested, quota, Action.class, Target.class,
                 actionRepository::countByTargetId);
+    }
+
+    boolean actionHistoryContainsAssignment(Target target, JpaDistributionSet distributionSet){
+        PageRequest pageRequest = PageRequest.of(0, 1000);
+        Page<JpaAction> page = actionRepository.findByTargetAndDistributionSet(pageRequest, (JpaTarget) target, distributionSet);
+
+        return page.hasContent();
     }
 
     protected boolean isMultiAssignmentsEnabled() {

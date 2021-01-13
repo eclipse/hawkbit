@@ -110,7 +110,32 @@ public interface DeploymentManagement {
     @PreAuthorize(SpringEvalExpressions.HAS_AUTH_READ_REPOSITORY_AND_UPDATE_TARGET)
     List<DistributionSetAssignmentResult> assignDistributionSets(String initiatedBy,
             @Valid @NotEmpty List<DeploymentRequest> deploymentRequests, String actionMessage);
-            
+
+    /**
+     * Assigns {@link DistributionSet} to {@link Target} according to the
+     * {@link DeploymentRequest}.
+     *
+     * @param target
+     *            target that the DS shall be assigned to
+     * @param deploymentRequest
+     *            information about target-ds-assignment that shall be made
+     * @param actionMessage
+     *            an optional message for the action status
+     *
+     * @return the assignment result
+     *
+     * @throws IncompleteDistributionSetException
+     *             if mandatory {@link SoftwareModuleType} are not assigned as
+     *             defined by the {@link DistributionSetType}.
+     *
+     * @throws EntityNotFoundException
+     *             if either provided {@link DistributionSet} or {@link Target}s
+     *             do not exist
+     */
+    @PreAuthorize(SpringEvalExpressions.HAS_AUTH_READ_REPOSITORY_AND_UPDATE_TARGET)
+    DistributionSetAssignmentResult assignDistributionSet(@Valid Target target,
+            DeploymentRequest deploymentRequest, String actionMessage);
+
                 /**
      * build a {@link DeploymentRequest} for a target distribution set
      * assignment

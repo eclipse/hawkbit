@@ -858,4 +858,10 @@ public class RepositoryApplicationConfiguration extends JpaBaseConfiguration {
             final RolloutManagement rolloutManagement, final SystemSecurityContext systemSecurityContext) {
         return new RolloutScheduler(systemManagement, rolloutManagement, systemSecurityContext);
     }
+
+    @Bean
+    @ConditionalOnMissingBean
+    TargetFieldExtractor targetFieldsExtractorService(){
+        return new TargetFieldExtractor();
+    }
 }

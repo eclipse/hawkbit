@@ -29,6 +29,7 @@ import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
@@ -40,11 +41,14 @@ import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 
 import org.eclipse.hawkbit.repository.ControllerManagement;
+import org.eclipse.hawkbit.repository.DeploymentManagement;
 import org.eclipse.hawkbit.repository.EntityFactory;
 import org.eclipse.hawkbit.repository.MaintenanceScheduleHelper;
 import org.eclipse.hawkbit.repository.QuotaManagement;
 import org.eclipse.hawkbit.repository.RepositoryConstants;
 import org.eclipse.hawkbit.repository.RepositoryProperties;
+import org.eclipse.hawkbit.repository.SystemManagement;
+import org.eclipse.hawkbit.repository.TargetFilterQueryManagement;
 import org.eclipse.hawkbit.repository.TenantConfigurationManagement;
 import org.eclipse.hawkbit.repository.UpdateMode;
 import org.eclipse.hawkbit.repository.builder.ActionStatusCreate;
@@ -65,16 +69,19 @@ import org.eclipse.hawkbit.repository.jpa.model.JpaAction_;
 import org.eclipse.hawkbit.repository.jpa.model.JpaDistributionSet;
 import org.eclipse.hawkbit.repository.jpa.model.JpaTarget;
 import org.eclipse.hawkbit.repository.jpa.model.JpaTarget_;
+import org.eclipse.hawkbit.repository.jpa.rsql.RsqlMatcher;
 import org.eclipse.hawkbit.repository.jpa.specifications.ActionSpecifications;
 import org.eclipse.hawkbit.repository.jpa.utils.DeploymentHelper;
 import org.eclipse.hawkbit.repository.jpa.utils.QuotaHelper;
 import org.eclipse.hawkbit.repository.model.Action;
 import org.eclipse.hawkbit.repository.model.Action.Status;
 import org.eclipse.hawkbit.repository.model.ActionStatus;
+import org.eclipse.hawkbit.repository.model.DeploymentRequest;
 import org.eclipse.hawkbit.repository.model.DistributionSet;
 import org.eclipse.hawkbit.repository.model.SoftwareModule;
 import org.eclipse.hawkbit.repository.model.SoftwareModuleMetadata;
 import org.eclipse.hawkbit.repository.model.Target;
+import org.eclipse.hawkbit.repository.model.TargetFilterQuery;
 import org.eclipse.hawkbit.repository.model.TargetUpdateStatus;
 import org.eclipse.hawkbit.repository.model.helper.EventPublisherHolder;
 import org.eclipse.hawkbit.security.SystemSecurityContext;
@@ -91,6 +98,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.integration.support.locks.LockRegistry;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -137,6 +145,12 @@ public class JpaControllerManagement extends JpaActionManagement implements Cont
     private SystemSecurityContext systemSecurityContext;
 
     @Autowired
+    private SystemManagement systemManagement;
+
+    @Autowired
+    private LockRegistry lockRegistry;
+
+    @Autowired
     private EntityFactory entityFactory;
 
     @Autowired
@@ -153,6 +167,18 @@ public class JpaControllerManagement extends JpaActionManagement implements Cont
 
     @Autowired
     private TenantAware tenantAware;
+
+    @Autowired
+    private TargetFilterQueryManagement targetFilterQueryManagement;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
+    @Autowired
+    private DeploymentManagement deploymentManagement;
+
+    @Autowired
+    private TargetFieldExtractor fieldExtractor;
 
     JpaControllerManagement(final ScheduledExecutorService executorService,
             final RepositoryProperties repositoryProperties, final ActionRepository actionRepository) {
@@ -767,6 +793,71 @@ public class JpaControllerManagement extends JpaActionManagement implements Cont
         assertTargetAttributesQuota(target);
 
         return targetRepository.save(target);
+    }
+
+
+    @Override
+    public void triggerDistributionSetAssignmentCheck(String controllerId){
+        LOG.debug("Auto assign check with ID triggered...");
+        systemSecurityContext.runAsSystem(() -> executeAutoAssignCheck(controllerId));
+    }
+
+    private Object executeAutoAssignCheck(String controllerId) {
+
+        final int PAGE_SIZE = 1000;
+        final PageRequest pageRequest = PageRequest.of(0, PAGE_SIZE);
+        final Page<TargetFilterQuery> filterQueries = targetFilterQueryManagement.findWithAutoAssignDS(pageRequest);
+
+        final Lock lock = lockRegistry.obtain("autoassign");
+        if (!lock.tryLock()) {
+            return null;
+        }
+
+        try {
+            systemManagement.forEachTenant(tenant -> checkForAutoAssignDS(controllerId, filterQueries));
+        } finally {
+            lock.unlock();
+        }
+
+        return null;
+    }
+
+    private void checkForAutoAssignDS(String controllerId, Page<TargetFilterQuery> filterQueries){
+
+        final JpaTarget target = (JpaTarget) targetRepository.findByControllerId(controllerId)
+                .orElseThrow(() -> new EntityNotFoundException(Target.class, controllerId));
+
+        TargetFieldData fieldData = fieldExtractor.extractData(target);
+
+        TargetFilterQuery matchedQuery = null;
+
+        for(TargetFilterQuery query: filterQueries){
+            if(RsqlMatcher.matches(query.getQuery(), fieldData)){
+                matchedQuery = query;
+                break;
+            }
+        }
+
+        if(matchedQuery == null) {
+            return;
+        }
+
+        assignDsToTarget(target, matchedQuery);
+    }
+
+    private void assignDsToTarget(Target target, TargetFilterQuery query){
+        final String actionMessage = String.format("Auto assignment by target filter: %s; Target ID: %s", query.getName(), target.getControllerId());
+
+        DeploymentRequest deploymentRequest = createDeploymentRequest(query, target);
+
+        DeploymentHelper.runInNewTransaction(transactionManager, "AutoAssignDSToTarget",
+                Isolation.READ_COMMITTED.value(), status -> deploymentManagement.assignDistributionSet(target, deploymentRequest, actionMessage));
+        LOG.debug(actionMessage);
+    }
+
+    private static DeploymentRequest createDeploymentRequest(TargetFilterQuery tfq, Target target){
+        return DeploymentManagement.deploymentRequest(target.getControllerId(), tfq.getAutoAssignDistributionSet().getId())
+                .setActionType(tfq.getAutoAssignActionType()).setWeight(tfq.getAutoAssignWeight().orElse(null)).build();
     }
 
     private static boolean isAttributeEntryValid(final Map.Entry<String, String> e) {

@@ -83,10 +83,27 @@ public class OfflineDsAssignmentStrategy extends AbstractDsAssignmentStrategy {
     }
 
     @Override
+    void closeActiveActions(Long targetId) {
+        // Not supported by offline case
+    }
+
+    @Override
+    void cancelActiveActions(Long targetId) {
+        // Not supported by offline case
+    }
+
+    @Override
     void setAssignedDistributionSetAndTargetStatus(final JpaDistributionSet set, final List<List<Long>> targetIds,
             final String currentUser) {
         targetIds.forEach(tIds -> targetRepository.setAssignedAndInstalledDistributionSetAndUpdateStatus(
                 TargetUpdateStatus.IN_SYNC, set, System.currentTimeMillis(), currentUser, tIds));
+    }
+
+    @Override
+    void setAssignedDistributionSetAndTargetStatus(DistributionSet dSet, Long targetId, String currentUser) {
+        throw new UnsupportedOperationException(
+                "Method 'setAssignedDistributionSetAndTargetStatus(DistributionSet dSet, Long targetId, String currentUser)'"
+                        + " not supported for Offline Assignment Strategy");
     }
 
     @Override

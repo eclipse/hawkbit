@@ -9,6 +9,9 @@
 package org.eclipse.hawkbit.repository.model;
 
 import java.net.URI;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -98,5 +101,15 @@ public interface Target extends NamedEntity {
      *         {@link #getControllerAttributes()}.
      */
     boolean isRequestControllerAttributes();
+
+    Set<TargetTag> getTags();
+
+    Map<String, String> getControllerAttributes();
+
+    DistributionSet getInstalledDistributionSet();
+
+    DistributionSet getAssignedDistributionSet();
+
+    List<TargetMetadata> getMetadata();
 
 }

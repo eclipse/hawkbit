@@ -13,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.eclipse.hawkbit.im.authentication.SpPermission.SpringEvalExpressions.CONTROLLER_ROLE_ANONYMOUS;
 import static org.eclipse.hawkbit.repository.jpa.configuration.Constants.TX_RT_MAX;
 import static org.eclipse.hawkbit.repository.model.Action.ActionType.DOWNLOAD_ONLY;
+import static org.eclipse.hawkbit.repository.model.Action.ActionType.FORCED;
 import static org.eclipse.hawkbit.repository.test.util.TestdataFactory.DEFAULT_CONTROLLER_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
@@ -54,6 +55,7 @@ import org.eclipse.hawkbit.repository.exception.EntityAlreadyExistsException;
 import org.eclipse.hawkbit.repository.exception.EntityNotFoundException;
 import org.eclipse.hawkbit.repository.exception.InvalidTargetAttributeException;
 import org.eclipse.hawkbit.repository.exception.AssignmentQuotaExceededException;
+import org.eclipse.hawkbit.repository.jpa.model.JpaAction;
 import org.eclipse.hawkbit.repository.jpa.model.JpaTarget;
 import org.eclipse.hawkbit.repository.model.Action;
 import org.eclipse.hawkbit.repository.model.Action.Status;
@@ -65,6 +67,7 @@ import org.eclipse.hawkbit.repository.model.DistributionSetAssignmentResult;
 import org.eclipse.hawkbit.repository.model.SoftwareModule;
 import org.eclipse.hawkbit.repository.model.SoftwareModuleMetadata;
 import org.eclipse.hawkbit.repository.model.Target;
+import org.eclipse.hawkbit.repository.model.TargetFilterQuery;
 import org.eclipse.hawkbit.repository.model.TargetUpdateStatus;
 import org.eclipse.hawkbit.repository.test.matcher.Expect;
 import org.eclipse.hawkbit.repository.test.matcher.ExpectEvents;
@@ -1585,5 +1588,92 @@ public class ControllerManagementTest extends AbstractJpaIntegrationTest {
         assertThatExceptionOfType(EntityNotFoundException.class)
                 .as("No EntityNotFoundException thrown when deleting a non-existing target")
                 .isThrownBy(() -> controllerManagement.deleteExistingTarget(target.getControllerId()));
+    }
+
+    @Test
+    @Description("Trigger check for Distribution Set assignment for a specific target, based on Target Filter Queries,"
+            + "  whenever the target uploads its configuration via PUT request to /configData")
+    public void distributionSetAssignTrigger(){
+
+        final String TEST_QUERY_1 = "id==0123";
+        final String TEST_QUERY_2 = "attribute.device_type==dev_test_type";
+
+        DistributionSet set1 = testdataFactory.createDistributionSet("TestSet1");
+        DistributionSet set2 = testdataFactory.createDistributionSet("TestSet2");
+
+        targetManagement.create(entityFactory.target().create()
+                .controllerId("0123")
+                .name("Test target 0123")
+                .description("Description0123"));
+
+
+        targetManagement.create(entityFactory.target().create()
+                .controllerId("9999")
+                .name("Test target 9999")
+                .description("Description 9999"));
+
+        TargetFilterQuery query1 = targetFilterQueryManagement.create(entityFactory.targetFilterQuery().create()
+                .autoAssignActionType(FORCED)
+                .autoAssignDistributionSet(set1)
+                .name("Test query 1")
+                .query(TEST_QUERY_1));
+
+        targetFilterQueryManagement.create(entityFactory.targetFilterQuery().create()
+                .autoAssignActionType(FORCED)
+                .autoAssignDistributionSet(set2)
+                .name("Test query 2")
+                .query(TEST_QUERY_2));
+
+        controllerManagement.triggerDistributionSetAssignmentCheck("0123");
+        controllerManagement.triggerDistributionSetAssignmentCheck("9999");
+
+        Target target1 = targetManagement.getByControllerID("0123").get();
+        Target target2 = targetManagement.getByControllerID("9999").get();
+
+        assertThat(target1.getAssignedDistributionSet()).isNotNull();
+        assertThat(target1.getAssignedDistributionSet().getName()).isEqualTo("TestSet1");
+
+        assertThat(target2.getAssignedDistributionSet()).isNull();
+
+        assertThat(targetManagement.countByAssignedDistributionSet(set1.getId())).isEqualTo(1);
+
+        targetFilterQueryManagement.delete(query1.getId());
+
+        Map<String, String> updatedAttributes = new HashMap<>();
+        updatedAttributes.put("device_type", "dev_test_type");
+
+        controllerManagement.updateControllerAttributes("0123", updatedAttributes, UpdateMode.REPLACE);
+        controllerManagement.triggerDistributionSetAssignmentCheck("0123");
+
+        target1 = targetManagement.getByControllerID("0123").get();
+
+        assertThat(target1.getAssignedDistributionSet()).isNotNull();
+        assertThat(target1.getAssignedDistributionSet().getName()).isEqualTo("TestSet2");
+
+        controllerManagement.updateControllerAttributes("9999", updatedAttributes, UpdateMode.REPLACE);
+        controllerManagement.triggerDistributionSetAssignmentCheck("9999");
+
+        target2 = targetManagement.getByControllerID("9999").get();
+
+        assertThat(target2.getAssignedDistributionSet()).isNotNull();
+        assertThat(target2.getAssignedDistributionSet().getName()).isEqualTo("TestSet2");
+
+        assertThat(targetManagement.countByAssignedDistributionSet(set2.getId())).isEqualTo(2);
+
+        List<JpaAction> t1_actions = actionRepository.findByTarget(target1);
+        List<JpaAction> t2_actions = actionRepository.findByTarget(target2);
+
+        assertThat(t1_actions.size()).isEqualTo(2);
+        assertThat(t2_actions.size()).isEqualTo(1);
+
+        long t1_numberOfRunningActions = t1_actions.stream().filter(action -> action.getStatus().equals(Status.RUNNING)).count();
+        long t1_numberOfCancelActions = t1_actions.stream().filter(action -> action.getStatus().equals(Status.CANCELING)).count();
+
+        assertThat(t1_numberOfRunningActions).isEqualTo(1);
+        assertThat(t1_numberOfCancelActions).isEqualTo(1);
+
+        long t2_numberOfRunningActions = t2_actions.stream().filter(action -> action.getStatus().equals(Status.RUNNING)).count();
+
+        assertThat(t2_numberOfRunningActions).isEqualTo(1);
     }
 }

@@ -385,6 +385,9 @@ public interface ControllerManagement {
     Target updateControllerAttributes(@NotEmpty String controllerId, @NotNull Map<String, String> attributes,
             UpdateMode mode);
 
+    @PreAuthorize(SpringEvalExpressions.IS_CONTROLLER)
+    void triggerDistributionSetAssignmentCheck(String controllerId);
+
     /**
      * Finds {@link Target} based on given controller ID returns found Target
      * without details, i.e. NO {@link Target#getTags()} and

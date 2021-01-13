@@ -205,6 +205,7 @@ public class JpaTarget extends AbstractJpaNamedEntity implements Target, EventAw
         // empty constructor for JPA.
     }
 
+    @Override
     public DistributionSet getAssignedDistributionSet() {
         return assignedDistributionSet;
     }
@@ -214,6 +215,7 @@ public class JpaTarget extends AbstractJpaNamedEntity implements Target, EventAw
         return controllerId;
     }
 
+    @Override
     public Set<TargetTag> getTags() {
         if (tags == null) {
             return Collections.emptySet();
@@ -348,10 +350,12 @@ public class JpaTarget extends AbstractJpaNamedEntity implements Target, EventAw
         return updateStatus;
     }
 
-    public JpaDistributionSet getInstalledDistributionSet() {
+    @Override
+    public DistributionSet getInstalledDistributionSet() {
         return installedDistributionSet;
     }
 
+    @Override
     public Map<String, String> getControllerAttributes() {
         return controllerAttributes;
     }
@@ -361,6 +365,7 @@ public class JpaTarget extends AbstractJpaNamedEntity implements Target, EventAw
         return requestControllerAttributes;
     }
 
+    @Override
     public List<TargetMetadata> getMetadata() {
         if (metadata == null) {
             return Collections.emptyList();

@@ -924,12 +924,12 @@ public class AmqpMessageHandlerServiceIntegrationTest extends AbstractAmqpServic
         assertThat(target).isPresent();
 
         // verify the DS was assigned to the Target
-        final DistributionSet assignedDistributionSet = ((JpaTarget) target.get()).getAssignedDistributionSet();
+        final DistributionSet assignedDistributionSet = target.get().getAssignedDistributionSet();
         assertThat(assignedDsId).isNotNull();
         assertThat(assignedDistributionSet.getId()).isEqualTo(assignedDsId);
 
         // verify that the installed DS was not affected
-        final JpaDistributionSet installedDistributionSet = ((JpaTarget) target.get()).getInstalledDistributionSet();
+        final DistributionSet installedDistributionSet = target.get().getInstalledDistributionSet();
         if (installedDsId == null) {
             assertThat(installedDistributionSet).isNull();
         } else {

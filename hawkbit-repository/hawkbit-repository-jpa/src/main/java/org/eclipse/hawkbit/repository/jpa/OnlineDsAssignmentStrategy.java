@@ -119,6 +119,16 @@ public class OnlineDsAssignmentStrategy extends AbstractDsAssignmentStrategy {
     }
 
     @Override
+    void closeActiveActions(final Long targetId) {
+        closeObsoleteUpdateActions(Collections.singletonList(targetId));
+    }
+
+    @Override
+    void cancelActiveActions(final Long targetId) {
+        overrideObsoleteUpdateActions(Collections.singletonList(targetId));
+    }
+
+    @Override
     void setAssignedDistributionSetAndTargetStatus(final JpaDistributionSet set, final List<List<Long>> targetIds,
             final String currentUser) {
         targetIds.forEach(tIds -> targetRepository.setAssignedDistributionSetAndUpdateStatus(TargetUpdateStatus.PENDING,
@@ -126,10 +136,16 @@ public class OnlineDsAssignmentStrategy extends AbstractDsAssignmentStrategy {
 
     }
 
+    void setAssignedDistributionSetAndTargetStatus(final DistributionSet dSet, final Long targetId, final String currentUser){
+        targetRepository.setAssignedDistributionSetAndUpdateStatus(TargetUpdateStatus.PENDING,
+                (JpaDistributionSet) dSet, System.currentTimeMillis(), currentUser, Collections.singletonList(targetId));
+    }
+
     @Override
     JpaAction createTargetAction(final String initiatedBy, final TargetWithActionType targetWithActionType,
             final List<JpaTarget> targets, final JpaDistributionSet set) {
         final JpaAction result = super.createTargetAction(initiatedBy, targetWithActionType, targets, set);
+
         if (result != null) {
             result.setStatus(Status.RUNNING);
         }
