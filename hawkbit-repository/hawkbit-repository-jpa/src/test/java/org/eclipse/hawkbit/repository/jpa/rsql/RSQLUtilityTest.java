@@ -8,6 +8,8 @@
  */
 package org.eclipse.hawkbit.repository.jpa.rsql;
 
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -55,6 +57,9 @@ import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
 import io.qameta.allure.Story;
 
+import java.util.Arrays;
+import java.util.List;
+
 @RunWith(SpringRunner.class)
 @Feature("Component Tests - Repository")
 @Story("RSQL search utility")
@@ -98,6 +103,46 @@ public class RSQLUtilityTest {
             .<String> builder().value("00:05:00").build();
     private static final TenantConfigurationValue<String> TEST_POLLING_OVERDUE_TIME_INTERVAL = TenantConfigurationValue
             .<String> builder().value("00:07:37").build();
+
+    @Test
+    @Description("Testing throwing exception in case of not allowed RSQL key")
+    public void rsqlUnsupportedFieldExceptionTest(){
+        final String rsql1 = "wrongfield == abcd";
+        assertThatExceptionOfType(RSQLParameterUnsupportedFieldException.class)
+                .isThrownBy(()-> RSQLUtility.isValid(rsql1, TestFieldEnum.class));
+
+        final String rsql2 = "wrongfield == abcd or TESTFIELD_WITH_SUB_ENTITIES.subentity11 == 0123";
+        assertThatExceptionOfType(RSQLParameterUnsupportedFieldException.class)
+                .isThrownBy(()-> RSQLUtility.isValid(rsql2, TestFieldEnum.class));
+    }
+
+    @Test
+    @Description("Testing exception in case of not allowed subkey")
+    public void rsqlUnsupportedSubkeyThrowException(){
+        final String rsql1 = "TESTFIELD_WITH_SUB_ENTITIES.unsupported == abcd and TESTFIELD_WITH_SUB_ENTITIES.subentity22 == 0123";
+        assertThatExceptionOfType(RSQLParameterUnsupportedFieldException.class)
+                .isThrownBy(()-> RSQLUtility.isValid(rsql1, TestFieldEnum.class));
+
+        final String rsql2 = "TESTFIELD_WITH_SUB_ENTITIES.unsupported == abcd or TESTFIELD_WITH_SUB_ENTITIES.subentity22 == 0123";
+        assertThatExceptionOfType(RSQLParameterUnsupportedFieldException.class)
+                .isThrownBy(()-> RSQLUtility.isValid(rsql2, TestFieldEnum.class));
+
+        final String rsql3 = "TESTFIELD == abcd or TESTFIELD_WITH_SUB_ENTITIES.unsupported == 0123";
+        assertThatExceptionOfType(RSQLParameterUnsupportedFieldException.class)
+                .isThrownBy(()-> RSQLUtility.isValid(rsql3, TestFieldEnum.class));
+    }
+
+    @Test
+    @Description("Testing valid RSQL keys based on TestFieldEnum.class")
+    public void rsqlFieldValidation(){
+        final String rsql1 = "TESTFIELD_WITH_SUB_ENTITIES.subentity11 == abcd and TESTFIELD_WITH_SUB_ENTITIES.subentity22 == 0123";
+        final String rsql2 = "TESTFIELD_WITH_SUB_ENTITIES.subentity11 == abcd or TESTFIELD_WITH_SUB_ENTITIES.subentity22 == 0123";
+        final String rsql3 = "TESTFIELD_WITH_SUB_ENTITIES.subentity11 == abcd and TESTFIELD_WITH_SUB_ENTITIES.subentity22 == 0123 and TESTFIELD == any";
+
+        assertTrue("All fields should be valid", RSQLUtility.isValid(rsql1, TestFieldEnum.class));
+        assertTrue("All fields should be valid", RSQLUtility.isValid(rsql2, TestFieldEnum.class));
+        assertTrue("All fields should be valid", RSQLUtility.isValid(rsql3, TestFieldEnum.class));
+    }
 
     @Test
     public void wrongRsqlSyntaxThrowSyntaxException() {
@@ -421,23 +466,33 @@ public class RSQLUtilityTest {
     }
 
     private enum TestFieldEnum implements FieldNameProvider {
-        TESTFIELD;
+        TESTFIELD("testfield"),
+        TESTFIELD_WITH_SUB_ENTITIES("testfieldWithSubEntities", "subentity11", "subentity22");
 
-        /*
-         * (non-Javadoc)
-         *
-         * @see
-         * org.eclipse.hawkbit.server.rest.resource.model.FieldNameProvider#
-         * getFieldName()
-         */
+        private final String fieldName;
+        private List<String> subEntityAttributes;
+
+        TestFieldEnum(final String fieldName){
+            this(fieldName,  new String[0]);
+        }
+
+        TestFieldEnum(final String fieldName, final String... subEntityAttributes) {
+            this.fieldName = fieldName;
+            this.subEntityAttributes = (Arrays.asList(subEntityAttributes));
+        }
+
         @Override
         public String getFieldName() {
-            return "testfield";
+            return this.fieldName;
+        }
+
+        @Override
+        public List<String> getSubEntityAttributes() {
+            return subEntityAttributes;
         }
     }
 
     private enum TestValueEnum {
         BUMLUX;
     }
-
 }

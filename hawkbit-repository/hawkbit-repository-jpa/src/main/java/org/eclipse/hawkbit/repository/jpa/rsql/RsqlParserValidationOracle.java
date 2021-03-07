@@ -34,7 +34,6 @@ import org.eclipse.persistence.exceptions.ConversionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.util.CollectionUtils;
 
@@ -76,7 +75,7 @@ public class RsqlParserValidationOracle implements RsqlValidationOracle {
         context.setSyntaxErrorContext(errorContext);
 
         try {
-            targetManagement.findByRsql(PageRequest.of(0, 1), rsqlQuery);
+            RSQLUtility.isValid(rsqlQuery, TargetFields.class);
             context.setSyntaxError(false);
             suggestionContext.getSuggestions().addAll(getLogicalOperatorSuggestion(rsqlQuery));
         } catch (final RSQLParameterSyntaxException | RSQLParserException ex) {
