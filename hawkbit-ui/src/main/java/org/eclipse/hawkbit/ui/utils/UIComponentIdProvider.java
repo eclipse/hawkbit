@@ -941,6 +941,11 @@ public final class UIComponentIdProvider {
     public static final String CUSTOM_FILTER_SAVE_ICON = "custom.filter.save.button.Id";
 
     /**
+     * custom filter - CSV export button id
+     */
+    public static final String CUSTOM_FILTER_CSV_ICON = "custom.filter.csv.button.Id";
+
+    /**
      * ID-Custom target tag table.
      */
     public static final String CUSTOM_TARGET_TAG_TABLE_ID = "custom.target.tag.tableId";

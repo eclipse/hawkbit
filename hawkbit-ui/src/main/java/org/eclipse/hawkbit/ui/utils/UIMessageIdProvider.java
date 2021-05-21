@@ -139,6 +139,8 @@ public final class UIMessageIdProvider {
 
     public static final String TOOLTIP_SAVE = "tooltip.save";
 
+    public static final String TOOLTIP_EXPORT_CSV = "tooltip.export.csv";
+
     public static final String TOOLTIP_METADATA_ICON = "tooltip.metadata.icon";
 
     public static final String TOOLTIP_UPDATE = "tooltip.update";

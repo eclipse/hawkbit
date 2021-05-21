@@ -332,6 +332,7 @@
                      <validHeader>licenses/LICENSE_HEADER_TEMPLATE_MICROSOFT_18.txt</validHeader>
                      <validHeader>licenses/LICENSE_HEADER_TEMPLATE_MICROSOFT_20.txt</validHeader>
                      <validHeader>licenses/LICENSE_HEADER_TEMPLATE_DEVOLO_19.txt</validHeader>
+                     <validHeader>licenses/LICENSE_HEADER_TEMPLATE_DEVOLO_20.txt</validHeader>
                      <validHeader>licenses/LICENSE_HEADER_TEMPLATE_KIWIGRID_19.txt</validHeader>
                      <validHeader>licenses/LICENSE_HEADER_TEMPLATE_ENAPTER.txt</validHeader>
                   </validHeaders>

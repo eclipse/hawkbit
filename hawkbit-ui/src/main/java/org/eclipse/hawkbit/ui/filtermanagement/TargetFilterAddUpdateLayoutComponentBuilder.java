@@ -121,4 +121,10 @@ public class TargetFilterAddUpdateLayoutComponentBuilder {
                 UIComponentIdProvider.CUSTOM_FILTER_SAVE_ICON, i18n.getMessage(UIMessageIdProvider.TOOLTIP_SAVE), null,
                 false, VaadinIcons.HARDDRIVE, SPUIButtonStyleNoBorder.class);
     }
+
+    public Button createExportButton(){
+        return SPUIComponentProvider.getButton(UIComponentIdProvider.CUSTOM_FILTER_CSV_ICON,
+                UIComponentIdProvider.CUSTOM_FILTER_CSV_ICON, i18n.getMessage(UIMessageIdProvider.TOOLTIP_EXPORT_CSV),
+                null, false, VaadinIcons.FILE_TEXT, SPUIButtonStyleNoBorder.class);
+    }
 }

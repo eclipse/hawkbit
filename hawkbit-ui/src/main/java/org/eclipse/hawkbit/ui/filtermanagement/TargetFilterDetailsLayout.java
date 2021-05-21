@@ -58,7 +58,7 @@ public class TargetFilterDetailsLayout extends AbstractGridComponentLayout {
             final TargetFilterQueryManagement targetFilterManagement, final TargetFilterDetailsLayoutUiState uiState) {
 
         this.targetFilterDetailsGridHeader = new TargetFilterDetailsGridHeader(uiDependencies, targetFilterManagement,
-                uiProperties, rsqlValidationOracle, uiState);
+                uiProperties, rsqlValidationOracle, uiState, targetManagement);
         this.targetFilterTargetGrid = new TargetFilterTargetGrid(uiDependencies, targetManagement, uiState);
         this.targetFilterCountMessageLabel = new TargetFilterCountMessageLabel(uiDependencies.getI18n());
 
