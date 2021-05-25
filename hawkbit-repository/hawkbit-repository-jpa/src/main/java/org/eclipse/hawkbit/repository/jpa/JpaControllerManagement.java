@@ -391,7 +391,7 @@ public class JpaControllerManagement extends JpaActionManagement implements Cont
                 .orElseGet(() -> createTarget(controllerId, address, name));
     }
 
-    private Target createTarget(final String controllerId, final URI address, String name) {
+    private Target createTarget(final String controllerId, final URI address, final String name) {
 
         final Target result = targetRepository.save((JpaTarget) entityFactory.target().create()
                 .controllerId(controllerId).description("Plug and Play target: " + controllerId).name((StringUtils.hasText(name) ? name : controllerId))
@@ -426,17 +426,26 @@ public class JpaControllerManagement extends JpaActionManagement implements Cont
         }
 
         try {
-            events.stream().collect(Collectors.groupingBy(TargetPoll::getTenant)).forEach((tenant, polls) -> {
-                final TransactionCallback<Void> createTransaction = status -> updateLastTargetQueries(tenant, polls);
-                tenantAware.runAsTenant(tenant,
-                        () -> DeploymentHelper.runInNewTransaction(txManager, "flushUpdateQueue", createTransaction));
-            });
+            events.stream().collect(Collectors.groupingBy(TargetPoll::getTenant)).forEach(this::updateLastTargetQuery);
         } catch (final RuntimeException ex) {
             LOG.error("Failed to persist UpdateQueue content.", ex);
             return;
         }
 
         LOG.debug("{} events persisted.", drained);
+    }
+
+    private void updateLastTargetQuery(final String tenant, final List<TargetPoll> polls) {
+        final TransactionCallback<Void> transactionCallback = status -> updateLastTargetQueries(tenant, polls);
+        tenantAware.runAsTenant(tenant,
+                () -> {
+                    try {
+                        DeploymentHelper.runInNewTransaction(txManager, "flushUpdateQueue", transactionCallback);
+                    } catch (final TransactionExecutionException e) {
+                        LOG.error("Caught exception in 'flushUpdateQueue' during lastTargetQuery update", e);
+                    }
+                    return null;
+                });
     }
 
     private Void updateLastTargetQueries(final String tenant, final List<TargetPoll> polls) {

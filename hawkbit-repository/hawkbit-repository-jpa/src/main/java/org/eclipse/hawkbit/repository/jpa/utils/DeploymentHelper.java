@@ -16,6 +16,7 @@ import javax.validation.constraints.NotNull;
 
 import org.eclipse.hawkbit.repository.jpa.ActionRepository;
 import org.eclipse.hawkbit.repository.jpa.TargetRepository;
+import org.eclipse.hawkbit.repository.jpa.TransactionExecutionException;
 import org.eclipse.hawkbit.repository.jpa.model.JpaAction;
 import org.eclipse.hawkbit.repository.jpa.model.JpaTarget;
 import org.eclipse.hawkbit.repository.model.Action;
@@ -91,7 +92,8 @@ public final class DeploymentHelper {
      * @return the result of the action
      */
     public static <T> T runInNewTransaction(@NotNull final PlatformTransactionManager txManager,
-            final String transactionName, @NotNull final TransactionCallback<T> action) {
+            final String transactionName, @NotNull final TransactionCallback<T> action)
+            throws TransactionExecutionException {
         return runInNewTransaction(txManager, transactionName, Isolation.DEFAULT.value(), action);
     }
 
@@ -109,20 +111,30 @@ public final class DeploymentHelper {
      *
      * @return the result of the action
      */
+    @SuppressWarnings({ "squid:S2221", /* for catching the generic Exception instead of specific ones */
+                        "squid:S1162" /* for throwing a checked exception */ })
     public static <T> T runInNewTransaction(@NotNull final PlatformTransactionManager txManager,
-            final String transactionName, final int isolationLevel, @NotNull final TransactionCallback<T> action) {
+            final String transactionName, final int isolationLevel, @NotNull final TransactionCallback<T> action) throws
+            TransactionExecutionException {
         final DefaultTransactionDefinition def = new DefaultTransactionDefinition();
         def.setName(transactionName);
         def.setReadOnly(false);
         def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         def.setIsolationLevel(isolationLevel);
-        return new TransactionTemplate(txManager, def).execute(action);
+        final TransactionTemplate transactionTemplate = new TransactionTemplate(txManager, def);
+
+        try {
+            return transactionTemplate.execute(action);
+        } catch (final Exception e) {
+            LOG.error("Caught exception during transaction execution, transactionName: {}!", transactionName, e);
+            throw new TransactionExecutionException("Caught exception during transaction execution!", e);
+        }
     }
 
     /**
      * Runs the given handler in a non-system user context. Switches to the user
      * which is provided by the given callback.
-     * 
+     *
      * @param handler
      *            The handler to be invoked in the right user context.
      * @param username

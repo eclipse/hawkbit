@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import org.eclipse.hawkbit.repository.DeploymentManagement;
 import org.eclipse.hawkbit.repository.TargetFilterQueryManagement;
 import org.eclipse.hawkbit.repository.autoassign.AutoAssignExecutor;
+import org.eclipse.hawkbit.repository.jpa.TransactionExecutionException;
 import org.eclipse.hawkbit.repository.jpa.utils.DeploymentHelper;
 import org.eclipse.hawkbit.repository.model.Action;
 import org.eclipse.hawkbit.repository.model.DeploymentRequest;
@@ -127,7 +128,7 @@ public abstract class AbstractAutoAssignExecutor implements AutoAssignExecutor {
      * @return count of targets
      */
     protected int runTransactionalAssignment(final TargetFilterQuery targetFilterQuery,
-            final List<String> controllerIds) {
+            final List<String> controllerIds) throws TransactionExecutionException {
         final String actionMessage = String.format(ACTION_MESSAGE, targetFilterQuery.getName());
 
         return DeploymentHelper.runInNewTransaction(getTransactionManager(), "autoAssignDSToTargets",

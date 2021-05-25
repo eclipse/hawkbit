@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 
 import javax.validation.ConstraintDeclarationException;
 
-import org.eclipse.hawkbit.repository.builder.RolloutGroupCreate;
 import org.eclipse.hawkbit.repository.model.RolloutGroup;
 import org.eclipse.hawkbit.repository.model.RolloutGroupsValidation;
 import org.eclipse.hawkbit.repository.rsql.VirtualPropertyReplacer;
@@ -24,10 +23,7 @@ import org.eclipse.hawkbit.security.SystemSecurityContext;
 import org.eclipse.hawkbit.tenancy.TenantAware;
 import org.springframework.context.ApplicationContext;
 import org.springframework.integration.support.locks.LockRegistry;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.util.concurrent.ListenableFuture;
 
 /**
  * Core functionality for {@link RolloutManagement} implementations.
@@ -149,20 +145,5 @@ public abstract class AbstractRolloutManagement implements RolloutManagement {
         final RolloutGroupsValidation validation = validateTargetsInGroups(groups, baseFilter, totalTargets);
 
         return totalTargets - validation.getTargetsInGroups();
-    }
-
-    @Override
-    @Async
-    public ListenableFuture<RolloutGroupsValidation> validateTargetsInGroups(final List<RolloutGroupCreate> groups,
-            final String targetFilter, final Long createdAt) {
-
-        final String baseFilter = RolloutHelper.getTargetFilterQuery(targetFilter, createdAt);
-        final long totalTargets = targetManagement.countByRsql(baseFilter);
-        if (totalTargets == 0) {
-            throw new ConstraintDeclarationException("Rollout target filter does not match any targets");
-        }
-
-        return new AsyncResult<>(validateTargetsInGroups(
-                groups.stream().map(RolloutGroupCreate::build).collect(Collectors.toList()), baseFilter, totalTargets));
     }
 }

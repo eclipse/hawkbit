@@ -223,11 +223,17 @@ public class JpaSystemManagement implements CurrentTenantCacheKeyGenerator, Syst
      * @return the initial created {@link TenantMetaData}
      */
     private TenantMetaData createInitialTenantMetaData(final String tenant) {
-        return systemSecurityContext.runAsSystemAsTenant(
-                () -> DeploymentHelper.runInNewTransaction(txManager, "initial-tenant-creation", status -> {
+        return systemSecurityContext.runAsSystemAsTenant(() -> {
+            try {
+                return DeploymentHelper.runInNewTransaction(txManager, "initial-tenant-creation", status -> {
                     final DistributionSetType defaultDsType = createStandardSoftwareDataSetup();
                     return tenantMetaDataRepository.save(new JpaTenantMetaData(defaultDsType, tenant));
-                }), tenant);
+                });
+            } catch (final TransactionExecutionException e) {
+                LOGGER.error("Failed to create initial tenant metadata for tenant {}", tenant, e);
+                return null;
+            }
+        }, tenant);
     }
 
     @Override
@@ -352,8 +358,10 @@ public class JpaSystemManagement implements CurrentTenantCacheKeyGenerator, Syst
                 } catch (final RuntimeException ex) {
                     LOGGER.debug("Exception on forEachTenant execution for tenant {}. Continue with next tenant.",
                             tenant, ex);
-                    LOGGER.error("Exception on forEachTenant execution for tenant {} with error message [{}]. "
-                            + "Continue with next tenant.", tenant, ex.getMessage());
+                    LOGGER.error(
+                            "Exception on forEachTenant execution for tenant {} with error message [{}] and cause [{}]. "
+                                    + "Continue with next tenant.", tenant, ex.getMessage(),
+                            ex.getCause() == null ? "" : ex.getCause().getMessage());
                 }
                 return null;
             }));

@@ -11,6 +11,7 @@ package org.eclipse.hawkbit.repository.jpa;
 import static org.eclipse.hawkbit.repository.jpa.builder.JpaRolloutGroupCreate.addSuccessAndErrorConditionsAndActions;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -407,8 +408,14 @@ public class JpaRolloutManagement extends AbstractRolloutManagement {
         }
 
         try {
-            rollouts.forEach(rolloutId -> DeploymentHelper.runInNewTransaction(txManager, handlerId + "-" + rolloutId,
-                    status -> handleRollout(rolloutId)));
+            rollouts.forEach(rolloutId -> {
+                try {
+                    DeploymentHelper.runInNewTransaction(txManager, handlerId + "-" + rolloutId,
+                            status -> handleRollout(rolloutId));
+                } catch (TransactionExecutionException e) {
+                    LOGGER.error("Caught exception during rollout handling", e);
+                }
+            });
         } finally {
             lock.unlock();
         }
@@ -455,7 +462,7 @@ public class JpaRolloutManagement extends AbstractRolloutManagement {
     public Slice<Rollout> findByFiltersWithDetailedStatus(final Pageable pageable, final String searchText,
             final boolean deleted) {
         final Slice<JpaRollout> findAll = findByCriteriaAPI(pageable,
-                Arrays.asList(JpaRolloutHelper.likeNameOrDescription(searchText, deleted)));
+                Collections.singletonList(JpaRolloutHelper.likeNameOrDescription(searchText, deleted)));
         setRolloutStatusDetails(findAll);
         return JpaRolloutHelper.convertPage(findAll, pageable);
     }
