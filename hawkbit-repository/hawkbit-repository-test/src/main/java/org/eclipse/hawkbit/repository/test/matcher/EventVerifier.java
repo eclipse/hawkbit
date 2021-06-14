@@ -10,35 +10,25 @@
 package org.eclipse.hawkbit.repository.test.matcher;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.lang.reflect.Method;
-import java.util.Iterator;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.awaitility.Awaitility;
+import org.awaitility.Duration;
 import org.awaitility.core.ConditionTimeoutException;
-import org.eclipse.hawkbit.repository.event.remote.RemoteIdEvent;
-import org.eclipse.hawkbit.repository.event.remote.RemoteTenantAwareEvent;
-import org.eclipse.hawkbit.repository.event.remote.TargetAssignDistributionSetEvent;
+import org.eclipse.hawkbit.repository.event.TenantAwareEvent;
+import org.eclipse.hawkbit.repository.test.util.TenantEventCounter;
+import org.eclipse.hawkbit.repository.test.util.WithUser;
+import org.eclipse.hawkbit.tenancy.TenantAware;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cloud.bus.event.RemoteApplicationEvent;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.ApplicationListener;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.event.ApplicationEventMulticaster;
 import org.springframework.test.context.TestContext;
 import org.springframework.test.context.support.AbstractTestExecutionListener;
-
-import com.google.common.collect.ConcurrentHashMultiset;
-import com.google.common.collect.Multiset;
-import com.google.common.collect.Sets;
 
 /**
  * Test rule to setup and verify the event count for a method.
@@ -46,142 +36,113 @@ import com.google.common.collect.Sets;
 public class EventVerifier extends AbstractTestExecutionListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(EventVerifier.class);
 
-    private EventCaptor eventCaptor;
-
-    /**
-     * Publishes a reset counter marker event on the context to reset the
-     * current counted events. This allows test to prepare a setup such in
-     * {@code @Before} annotations which are actually counted to the executed
-     * test-method and maybe fire events which are not covered / recognized by
-     * the test-method itself and reset the counter again.
-     * 
-     * Note that this approach is only working when using a single-thread
-     * executor in the ApplicationEventMultiCaster, so the order of the events
-     * keep the same.
-     * 
-     * @param publisher
-     *            the {@link ApplicationEventPublisher} to publish the marker
-     *            event to
-     */
-    public static void publishResetMarkerEvent(final ApplicationEventPublisher publisher) {
-        publisher.publishEvent(new ResetCounterMarkerEvent());
-    }
-
     @Override
-    public void beforeTestMethod(final TestContext testContext) throws Exception {
-        final Optional<Expect[]> expectedEvents = getExpectationsFrom(testContext.getTestMethod());
-        expectedEvents.ifPresent(events -> beforeTest(testContext));
-    }
-
-    @Override
-    public void afterTestMethod(final TestContext testContext) throws Exception {
-        final Optional<Expect[]> expectedEvents = getExpectationsFrom(testContext.getTestMethod());
-        try {
-            expectedEvents.ifPresent(events -> afterTest(events));
-        } finally {
-            expectedEvents.ifPresent(listener -> removeEventListener(testContext));
+    public void afterTestExecution(final TestContext testContext) {
+        final Map<Class<?>, Integer> expectedEvents = getExpectations(testContext);
+        if (expectedEvents.isEmpty()) {
+            return;
         }
+        final TenantEventCounter eventCounter = testContext.getApplicationContext().getBean(TenantEventCounter.class);
+        final String tenant = testContext.getApplicationContext().getBean(TenantAware.class).getCurrentTenant();
+        logEvents(eventCounter.getEventsCount(tenant), expectedEvents);
+        verifyRightCountOfEvents(tenant, eventCounter, expectedEvents);
+        verifyAllEventsCounted(eventCounter.getEventsCount(tenant), expectedEvents);
     }
 
-    private Optional<Expect[]> getExpectationsFrom(final Method testMethod) {
-        return Optional.ofNullable(testMethod.getAnnotation(ExpectEvents.class)).map(ExpectEvents::value);
+    private static Map<Class<?>, Integer> getExpectations(final TestContext testContext) {
+        final ExpectEvents methodAnnotation = testContext.getTestMethod().getAnnotation(ExpectEvents.class);
+
+        if (methodAnnotation == null) {
+            return Collections.emptyMap();
+        }
+        return isAutoCreateTenant(testContext) ?
+                asMap(methodAnnotation.value(), getBeforeMethodExpects(testContext)) :
+                asMap(methodAnnotation.value());
     }
 
-    private void beforeTest(final TestContext testContext) {
-        final ConfigurableApplicationContext context = (ConfigurableApplicationContext) testContext
-                .getApplicationContext();
-        eventCaptor = new EventCaptor();
-        context.addApplicationListener(eventCaptor);
+    private static boolean isAutoCreateTenant(final TestContext testContext) {
+        final WithUser withUser = testContext.getTestMethod().isAnnotationPresent(WithUser.class) ?
+                testContext.getTestMethod().getAnnotation(WithUser.class) :
+                testContext.getTestClass().getAnnotation(WithUser.class);
+
+        return withUser == null || withUser.autoCreateTenant();
     }
 
-    private void afterTest(final Expect[] expectedEvents) {
-        verifyRightCountOfEvents(expectedEvents);
-        verifyAllEventsCounted(expectedEvents);
+    private static Map<Class<?>, Integer> asMap(final Expect[]... expectsArray) {
+        final Map<Class<?>, Integer> expectsMap = new HashMap<>();
+        for (final Expect[] expects : expectsArray) {
+            for (Expect expect : expects) {
+                expectsMap.merge(expect.type(), expect.count(), Integer::sum);
+            }
+        }
+        return expectsMap;
     }
 
-    private void verifyRightCountOfEvents(final Expect[] expectedEvents) {
+    private static Expect[] getBeforeMethodExpects(final TestContext testContext) {
+        Class<?> clazz = testContext.getTestClass();
+        do {
+            for (Method method : clazz.getDeclaredMethods()) {
+                if (method.isAnnotationPresent(BeforeEach.class) && method.isAnnotationPresent(ExpectEvents.class)) {
+                    return method.getAnnotation(ExpectEvents.class).value();
+                }
+            }
+            clazz = clazz.getSuperclass();
+        } while (clazz != null);
 
-        for (final Expect expectedEvent : expectedEvents) {
+        return new Expect[0];
+    }
+
+    private static void verifyRightCountOfEvents(final String tenant, final TenantEventCounter eventCounter,
+            final Map<Class<?>, Integer> expectedEvents) {
+
+        final StringBuilder failMessage = new StringBuilder();
+
+        for (Map.Entry<Class<?>, Integer> expected : expectedEvents.entrySet()) {
             try {
-                Awaitility.await().atMost(5, TimeUnit.SECONDS)
-                        .until(() -> eventCaptor.getCountFor(expectedEvent.type()), equalTo(expectedEvent.count()));
-
-            } catch (final ConditionTimeoutException ex) {
-                fail("Did not receive the expected amount of events form " + expectedEvent.type() + " Expected: "
-                        + expectedEvent.count() + " but was: " + eventCaptor.getCountFor(expectedEvent.type()));
+                Awaitility.await()
+                        .atMost(Duration.FIVE_SECONDS).pollInterval(Duration.ONE_HUNDRED_MILLISECONDS)
+                        .pollInSameThread()
+                        .untilAsserted(() -> assertThat(expected.getValue())
+                                .isEqualTo(eventCounter.getEventsCount(tenant).getOrDefault(expected.getKey(), 0)));
+            } catch (final ConditionTimeoutException e) {
+                LOGGER.trace("", e);
+                failMessage.append(expected.getKey().getSimpleName())
+                        .append("\t\t[expected: ")
+                        .append(expected.getValue())
+                        .append(", but was: ")
+                        .append(eventCounter.getEventsCount(tenant).getOrDefault(expected.getKey(), 0))
+                        .append("]\n");
             }
+        }
+
+        if (!failMessage.toString().isEmpty()) {
+            fail("Did not receive the expected amount of events.\n" + failMessage);
         }
     }
 
-    private void verifyAllEventsCounted(final Expect[] expectedEvents) {
+    private static void logEvents(final Map<Class<? extends TenantAwareEvent>, Integer> receivedEvents,
+            final Map<Class<?>, Integer> expectedEvents) {
+        LOGGER.trace("=============== Actual (Observed) Events ===============");
+        receivedEvents.forEach((aClass, integer) -> LOGGER.trace("{} -> {}", aClass.getSimpleName(), integer));
+        LOGGER.trace("===============================================\n\n");
 
-        final Set<Class<?>> diffSet = eventCaptor.diff(expectedEvents);
-        if (diffSet.size() > 0) {
-            final StringBuilder failMessage = new StringBuilder("Missing event verification for ");
-            final Iterator<Class<?>> itr = diffSet.iterator();
-            while (itr.hasNext()) {
-                final Class<?> element = itr.next();
-                final int count = eventCaptor.getCountFor(element);
-                failMessage.append(element + " with count: " + count + " ");
-            }
-            fail(failMessage.toString());
-        }
-
+        LOGGER.trace("=============== Expected Events ===============");
+        expectedEvents.forEach((aClass, integer) -> LOGGER.trace("{} -> {}", aClass.getSimpleName(), integer));
+        LOGGER.trace("===============================================\n\n");
     }
 
-    private void removeEventListener(final TestContext testContext) {
-        final ApplicationEventMulticaster multicaster = testContext.getApplicationContext()
-                .getBean(ApplicationEventMulticaster.class);
-        multicaster.removeApplicationListener(eventCaptor);
-    }
+    private static void verifyAllEventsCounted(final Map<Class<? extends TenantAwareEvent>, Integer> receivedEvents,
+            final Map<Class<?>, Integer> expectedEvents) {
+        final StringBuilder failMessage = new StringBuilder();
 
-    private static class EventCaptor implements ApplicationListener<RemoteApplicationEvent> {
-
-        private final Multiset<Class<?>> capturedEvents = ConcurrentHashMultiset.create();
-
-        @Override
-        public void onApplicationEvent(final RemoteApplicationEvent event) {
-            LOGGER.debug("Received event {}", event.getClass().getSimpleName());
-
-            if (ResetCounterMarkerEvent.class.isAssignableFrom(event.getClass())) {
-                LOGGER.debug("Retrieving reset counter marker event - resetting counters");
-                capturedEvents.clear();
-                return;
+        for (Map.Entry<Class<? extends TenantAwareEvent>, Integer> received : receivedEvents.entrySet()) {
+            if (!expectedEvents.containsKey(received.getKey())) {
+                failMessage.append("\n").append(received.getKey()).append(" with count: ").append(received.getValue());
             }
-
-            if (event instanceof RemoteTenantAwareEvent) {
-                assertThat(((RemoteTenantAwareEvent) event).getTenant()).isNotEmpty();
-            }
-
-            if (event instanceof RemoteIdEvent) {
-                assertThat(((RemoteIdEvent) event).getEntityId()).isNotNull();
-            }
-
-            if (event instanceof TargetAssignDistributionSetEvent) {
-                assertThat(((TargetAssignDistributionSetEvent) event).getActions()).isNotEmpty();
-                assertThat(((TargetAssignDistributionSetEvent) event).getDistributionSetId()).isNotNull();
-            }
-
-            capturedEvents.add(event.getClass());
         }
 
-        public int getCountFor(final Class<?> expectedEvent) {
-            return capturedEvents.count(expectedEvent);
-        }
-
-        public Set<Class<?>> diff(final Expect[] allEvents) {
-            return Sets.difference(capturedEvents.elementSet(),
-                    Stream.of(allEvents).map(Expect::type).collect(Collectors.toSet()));
-        }
-
-    }
-
-    private static final class ResetCounterMarkerEvent extends RemoteApplicationEvent {
-        private static final long serialVersionUID = 1L;
-
-        private ResetCounterMarkerEvent() {
-            super(new Object(), "resetcounter");
+        if (!failMessage.toString().isEmpty()) {
+            fail("Missing event verification for [" + failMessage.append("]").toString());
         }
     }
-
 }

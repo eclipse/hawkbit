@@ -8,24 +8,19 @@
  */
 package org.eclipse.hawkbit.app;
 
-import org.eclipse.hawkbit.repository.test.util.MsSqlTestDatabase;
-import org.eclipse.hawkbit.repository.test.util.MySqlTestDatabase;
+import org.eclipse.hawkbit.repository.test.util.SharedSqlTestDatabase;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.TestExecutionListeners.MergeMode;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.DefaultMockMvcBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 @SpringBootTest(properties = { "hawkbit.dmf.rabbitmq.enabled=false" })
-@TestExecutionListeners(listeners = { MySqlTestDatabase.class,
-        MsSqlTestDatabase.class }, mergeMode = MergeMode.MERGE_WITH_DEFAULTS)
-@DirtiesContext
+@ExtendWith(SharedSqlTestDatabase.class)
 public abstract class AbstractSecurityTest {
 
     @Autowired

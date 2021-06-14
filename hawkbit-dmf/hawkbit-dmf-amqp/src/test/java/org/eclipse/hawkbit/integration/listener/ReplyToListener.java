@@ -10,12 +10,12 @@ package org.eclipse.hawkbit.integration.listener;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumMap;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.hawkbit.dmf.amqp.api.EventTopic;
 import org.eclipse.hawkbit.dmf.amqp.api.MessageHeaderKey;
@@ -29,77 +29,89 @@ public class ReplyToListener implements TestRabbitListener {
     public static final String LISTENER_ID = "replyto";
     public static final String REPLY_TO_QUEUE = "reply_queue";
 
-    private final Map<EventTopic, List<Message>> eventMessages = new EnumMap<>(EventTopic.class);
-    private final List<EventTopic> eventMessageTopics = new ArrayList<>();
-    private final Map<String, Message> deleteMessages = new HashMap<>();
-    private final Map<String, Message> pingResponseMessages = new HashMap<>();
+    private final Map<String, Map<EventTopic, List<Message>>> tenantEventMessages = new ConcurrentHashMap<>();
+    private final Map<String, List<EventTopic>> tenantEventMessageTopics = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, Message>> tenantDeleteMessages = new HashMap<>();
+    private final Map<String, Map<String, Message>> tenantPingResponseMessages = new HashMap<>();
 
     @Override
     @RabbitListener(id = LISTENER_ID, queues = REPLY_TO_QUEUE)
     public void handleMessage(final Message message) {
         final MessageType messageType = MessageType
                 .valueOf(message.getMessageProperties().getHeaders().get(MessageHeaderKey.TYPE).toString());
+        final String tenant = message.getMessageProperties().getHeader(MessageHeaderKey.TENANT);
 
-        if (messageType == MessageType.EVENT) {
-            final EventTopic eventTopic = EventTopic
-                    .valueOf(message.getMessageProperties().getHeaders().get(MessageHeaderKey.TOPIC).toString());
-            eventMessageTopics.add(eventTopic);
-            eventMessages.merge(eventTopic, Collections.singletonList(message), (oldList, listToAdd) -> {
-                final List<Message> newList = new ArrayList<>(oldList);
-                newList.addAll(listToAdd);
-                return newList;
-            });
-            return;
+        switch (messageType) {
+            case EVENT:
+                processEventMessage(tenant, message);
+                return;
+            case THING_DELETED:
+                processThingDeletedMessage(message, tenant);
+                return;
+            case PING_RESPONSE:
+                processPingResponseMessage(message, tenant);
+                return;
+            default:
+                // if message type is not EVENT or THING_DELETED something unexpected
+                // happened
+                fail("Unexpected message type");
         }
-
-        if (messageType == MessageType.THING_DELETED) {
-            final String targetName = message.getMessageProperties().getHeaders().get(MessageHeaderKey.THING_ID)
-                    .toString();
-            deleteMessages.put(targetName, message);
-            return;
-        }
-
-        if (messageType == MessageType.PING_RESPONSE) {
-            pingResponseMessages.put(message.getMessageProperties().getCorrelationId(), message);
-            return;
-        }
-
-        // if message type is not EVENT or THING_DELETED something unexpected
-        // happened
-        fail("Unexpected message type");
-
     }
 
-    public void purge() {
-        eventMessages.clear();
-        deleteMessages.clear();
-        pingResponseMessages.clear();
-        eventMessageTopics.clear();
+    private void processEventMessage(final String tenant, final Message message) {
+        final EventTopic eventTopic = EventTopic.valueOf(
+                message.getMessageProperties().getHeaders().get(MessageHeaderKey.TOPIC).toString());
+
+        final List<EventTopic> eventTopics = tenantEventMessageTopics.getOrDefault(tenant, new LinkedList<>());
+        eventTopics.add(eventTopic);
+        tenantEventMessageTopics.put(tenant, eventTopics);
+
+        final Map<EventTopic, List<Message>> eventMessages = tenantEventMessages.getOrDefault(tenant, new ConcurrentHashMap<>());
+        final List<Message> messages = eventMessages.getOrDefault(eventTopic, new LinkedList<>());
+        messages.add(message);
+        eventMessages.put(eventTopic, messages);
+        tenantEventMessages.put(tenant, eventMessages);
     }
 
-    public List<EventTopic> getLatestEventMessageTopics() {
-        return eventMessageTopics;
+    private void processThingDeletedMessage(final Message message, final String tenant) {
+        final String targetName = message.getMessageProperties().getHeaders().get(MessageHeaderKey.THING_ID)
+                .toString();
+        final Map<String, Message> deleteMessages = tenantDeleteMessages.getOrDefault(tenant,
+                new ConcurrentHashMap<>());
+        deleteMessages.put(targetName, message);
+        tenantDeleteMessages.put(tenant, deleteMessages);
     }
 
-    public void resetLatestEventMessageTopics() {
-        eventMessageTopics.clear();
+    private void processPingResponseMessage(final Message message, final String tenant) {
+        final Map<String, Message> pingResponseMessages = tenantPingResponseMessages.getOrDefault(tenant,
+                new ConcurrentHashMap<>());
+        pingResponseMessages.put(message.getMessageProperties().getCorrelationId(), message);
+        tenantPingResponseMessages.put(tenant, pingResponseMessages);
     }
 
-    public Message getLatestEventMessage(final EventTopic eventTopic) {
-        final List<Message> messages = getEventMessages().get(eventTopic);
+    public List<EventTopic> getLatestEventMessageTopics(final String tenant) {
+        return tenantEventMessageTopics.get(tenant);
+    }
+
+    public void resetLatestEventMessageTopics(final String tenant) {
+        tenantEventMessageTopics.remove(tenant);
+    }
+
+    public Message getLatestEventMessage(final EventTopic eventTopic, final String tenant) {
+        final List<Message> messages = getTenantEventMessages(tenant).get(eventTopic);
         return messages == null ? null : messages.get(messages.size() - 1);
     }
 
-    public Map<EventTopic, List<Message>> getEventMessages() {
-        return eventMessages;
+    public Map<EventTopic, List<Message>> getTenantEventMessages(final String tenant) {
+        return tenantEventMessages.getOrDefault(tenant, new HashMap<>());
     }
 
-    public Map<String, Message> getDeleteMessages() {
-        return deleteMessages;
+    public Map<String, Message> getTenantDeleteMessages(final String tenant) {
+        return tenantDeleteMessages.getOrDefault(tenant, new HashMap<>());
     }
 
-    public Map<String, Message> getPingResponseMessages() {
-        return pingResponseMessages;
+    public Map<String, Message> getTenantPingResponseMessages(final String tenant) {
+        return tenantPingResponseMessages.getOrDefault(tenant, new HashMap<>());
     }
 
 }

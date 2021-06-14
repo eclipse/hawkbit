@@ -10,24 +10,32 @@ package org.eclipse.hawkbit.repository.jpa.tenancy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import static org.eclipse.hawkbit.im.authentication.SpPermission.SpringEvalExpressions.CONTROLLER_ROLE;
+import static org.eclipse.hawkbit.im.authentication.SpPermission.SpringEvalExpressions.SYSTEM_ROLE;
+import static org.springframework.test.context.TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS;
 
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.Callable;
 
 import org.eclipse.hawkbit.repository.exception.EntityNotFoundException;
 import org.eclipse.hawkbit.repository.jpa.AbstractJpaIntegrationTest;
 import org.eclipse.hawkbit.repository.model.DistributionSet;
 import org.eclipse.hawkbit.repository.model.Target;
+import org.eclipse.hawkbit.repository.test.util.CleanupTestExecutionListener;
+import org.eclipse.hawkbit.repository.test.util.DisposableSqlTestDatabase;
 import org.eclipse.hawkbit.repository.test.util.WithSpringAuthorityRule;
 import org.eclipse.hawkbit.repository.test.util.WithUser;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Slice;
+import org.springframework.test.context.TestExecutionListeners;
 
 import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
 import io.qameta.allure.Story;
+import net.jcip.annotations.NotThreadSafe;
 
 /**
  * Multi-Tenancy tests which testing the CRUD operations of entities that all
@@ -37,6 +45,10 @@ import io.qameta.allure.Story;
  */
 @Feature("Component Tests - Repository")
 @Story("Multi Tenancy")
+@ExtendWith(DisposableSqlTestDatabase.class)
+@NotThreadSafe // test methods should not run in parallel, since they use the same tenant
+@TestExecutionListeners(listeners = CleanupTestExecutionListener.class, mergeMode = MERGE_WITH_DEFAULTS)
+@WithUser(tenantId = "DEFAULT", principal = "bumlux", allSpPermissions = true, authorities = { CONTROLLER_ROLE, SYSTEM_ROLE })
 public class MultiTenancyEntityTest extends AbstractJpaIntegrationTest {
 
     @Test
@@ -91,11 +103,11 @@ public class MultiTenancyEntityTest extends AbstractJpaIntegrationTest {
         final String controllerAnotherTenant = "anotherController";
         createTargetForTenant(controllerAnotherTenant, anotherTenant);
 
-        assertThat(systemManagement.findTenants(PAGE)).as("Expected number if tenants before deletion is").hasSize(3);
+        assertThat(systemManagement.findTenants(PAGE)).as("Expected number of tenants before deletion is").hasSize(2);
 
         systemManagement.deleteTenant(anotherTenant);
 
-        assertThat(systemManagement.findTenants(PAGE)).as("Expected number if tenants after deletion is").hasSize(2);
+        assertThat(systemManagement.findTenants(PAGE)).as("Expected number of tenants after deletion is").hasSize(1);
     }
 
     @Test
@@ -128,7 +140,7 @@ public class MultiTenancyEntityTest extends AbstractJpaIntegrationTest {
 
         // ensure target cannot be deleted by 'mytenant'
         try {
-            targetManagement.delete(Arrays.asList(createTargetForTenant.getId()));
+            targetManagement.delete(Collections.singletonList(createTargetForTenant.getId()));
             fail("mytenant should not have been able to delete target of anotherTenant");
         } catch (final EntityNotFoundException ex) {
             // ok
@@ -138,7 +150,7 @@ public class MultiTenancyEntityTest extends AbstractJpaIntegrationTest {
         assertThat(targetsForAnotherTenant).hasSize(1);
 
         // ensure another tenant can delete the target
-        deleteTargetsForTenant(anotherTenant, Arrays.asList(createTargetForTenant.getId()));
+        deleteTargetsForTenant(anotherTenant, Collections.singletonList(createTargetForTenant.getId()));
         targetsForAnotherTenant = findTargetsForTenant(anotherTenant);
         assertThat(targetsForAnotherTenant).hasSize(0);
     }

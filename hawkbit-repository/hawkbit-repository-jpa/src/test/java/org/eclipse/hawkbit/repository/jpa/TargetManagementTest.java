@@ -188,8 +188,8 @@ public class TargetManagementTest extends AbstractJpaIntegrationTest {
 
     @Test
     @Description("Ensures that targets cannot be created e.g. in plug'n play scenarios when tenant does not exists.")
-    @WithUser(tenantId = "tenantWhichDoesNotExists", allSpPermissions = true, autoCreateTenant = false)
-    @ExpectEvents({ @Expect(type = TargetCreatedEvent.class, count = 0) })
+    @WithUser(allSpPermissions = true, autoCreateTenant = false)
+    @ExpectEvents(value = { @Expect(type = TargetCreatedEvent.class, count = 0) })
     public void createTargetForTenantWhichDoesNotExistThrowsTenantNotExistException() {
         try {
             targetManagement.create(entityFactory.target().create().controllerId("targetId123"));

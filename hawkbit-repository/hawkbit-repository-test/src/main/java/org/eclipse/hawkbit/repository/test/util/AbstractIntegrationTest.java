@@ -11,6 +11,7 @@ package org.eclipse.hawkbit.repository.test.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.eclipse.hawkbit.im.authentication.SpPermission.SpringEvalExpressions.CONTROLLER_ROLE;
 import static org.eclipse.hawkbit.im.authentication.SpPermission.SpringEvalExpressions.SYSTEM_ROLE;
+import static org.springframework.test.context.TestExecutionListeners.MergeMode.MERGE_WITH_DEFAULTS;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,6 +46,10 @@ import org.eclipse.hawkbit.repository.TargetFilterQueryManagement;
 import org.eclipse.hawkbit.repository.TargetManagement;
 import org.eclipse.hawkbit.repository.TargetTagManagement;
 import org.eclipse.hawkbit.repository.TenantConfigurationManagement;
+import org.eclipse.hawkbit.repository.event.remote.entity.DistributionSetTypeCreatedEvent;
+import org.eclipse.hawkbit.repository.event.remote.entity.SoftwareModuleTypeCreatedEvent;
+import org.eclipse.hawkbit.repository.event.remote.entity.SoftwareModuleTypeUpdatedEvent;
+import org.eclipse.hawkbit.repository.exception.TenantNotExistException;
 import org.eclipse.hawkbit.repository.model.Action;
 import org.eclipse.hawkbit.repository.model.Action.ActionType;
 import org.eclipse.hawkbit.repository.model.DeploymentRequest;
@@ -59,6 +64,8 @@ import org.eclipse.hawkbit.repository.model.Target;
 import org.eclipse.hawkbit.repository.model.TargetMetadata;
 import org.eclipse.hawkbit.repository.test.TestConfiguration;
 import org.eclipse.hawkbit.repository.test.matcher.EventVerifier;
+import org.eclipse.hawkbit.repository.test.matcher.Expect;
+import org.eclipse.hawkbit.repository.test.matcher.ExpectEvents;
 import org.eclipse.hawkbit.security.SystemSecurityContext;
 import org.eclipse.hawkbit.tenancy.TenantAware;
 import org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey;
@@ -84,13 +91,12 @@ import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestExecutionListeners;
-import org.springframework.test.context.TestExecutionListeners.MergeMode;
 import org.springframework.test.context.TestPropertySource;
 
 import com.google.common.io.Files;
 
 @ActiveProfiles({ "test" })
-@ExtendWith({JUnitTestLoggerExtension.class, WithSpringAuthorityRule.class})
+@ExtendWith({JUnitTestLoggerExtension.class, WithSpringAuthorityRule.class, SharedSqlTestDatabase.class})
 @WithUser(principal = "bumlux", allSpPermissions = true, authorities = { CONTROLLER_ROLE, SYSTEM_ROLE })
 @SpringBootTest
 @ContextConfiguration(classes = { TestConfiguration.class, TestSupportBinderAutoConfiguration.class })
@@ -99,12 +105,7 @@ import com.google.common.io.Files;
 // refreshed we e.g. get two instances of CacheManager which leads to very
 // strange test failures.
 @DirtiesContext(classMode = ClassMode.AFTER_CLASS)
-// Cleaning repository will fire "delete" events. We won't count them to the
-// test execution. So, the order execution between EventVerifier and Cleanup is
-// important!
-@TestExecutionListeners(inheritListeners = true, listeners = { EventVerifier.class, CleanupTestExecutionListener.class,
-        MySqlTestDatabase.class, MsSqlTestDatabase.class,
-        PostgreSqlTestDatabase.class }, mergeMode = MergeMode.MERGE_WITH_DEFAULTS)
+@TestExecutionListeners(listeners = EventVerifier.class, mergeMode = MERGE_WITH_DEFAULTS)
 @TestPropertySource(properties = "spring.main.allow-bean-definition-overriding=true")
 public abstract class AbstractIntegrationTest {
     private static final Logger LOG = LoggerFactory.getLogger(AbstractIntegrationTest.class);
@@ -327,10 +328,6 @@ public abstract class AbstractIntegrationTest {
         return ds.findFirstModuleByType(osType).get().getId();
     }
 
-    protected Action prepareFinishedUpdate() {
-        return prepareFinishedUpdate(TestdataFactory.DEFAULT_CONTROLLER_ID, "", false);
-    }
-
     protected Action prepareFinishedUpdate(final String controllerId, final String distributionSet,
             final boolean isRequiredMigrationStep) {
         final DistributionSet ds = testdataFactory.createDistributionSet(distributionSet, isRequiredMigrationStep);
@@ -348,35 +345,35 @@ public abstract class AbstractIntegrationTest {
     }
 
     @BeforeEach
-    public void beforeAll() throws Exception {
+    @ExpectEvents({@Expect(type = SoftwareModuleTypeCreatedEvent.class, count = 3),
+            @Expect(type = SoftwareModuleTypeUpdatedEvent.class, count = 3),
+            @Expect(type = DistributionSetTypeCreatedEvent.class, count = 4)})
+    public void beforeEach() throws Exception {
 
         final String description = "Updated description.";
 
-        osType = WithSpringAuthorityRule
-                .runAsPrivileged(() -> testdataFactory.findOrCreateSoftwareModuleType(TestdataFactory.SM_TYPE_OS));
-        osType = WithSpringAuthorityRule.runAsPrivileged(() -> softwareModuleTypeManagement
-                .update(entityFactory.softwareModuleType().update(osType.getId()).description(description)));
+        try {
+            osType = WithSpringAuthorityRule
+                    .runAsPrivileged(() -> testdataFactory.findOrCreateSoftwareModuleType(TestdataFactory.SM_TYPE_OS));
+            osType = WithSpringAuthorityRule.runAsPrivileged(() -> softwareModuleTypeManagement
+                    .update(entityFactory.softwareModuleType().update(osType.getId()).description(description)));
 
-        appType = WithSpringAuthorityRule.runAsPrivileged(
-                () -> testdataFactory.findOrCreateSoftwareModuleType(TestdataFactory.SM_TYPE_APP, Integer.MAX_VALUE));
-        appType = WithSpringAuthorityRule.runAsPrivileged(() -> softwareModuleTypeManagement
-                .update(entityFactory.softwareModuleType().update(appType.getId()).description(description)));
+            appType = WithSpringAuthorityRule.runAsPrivileged(
+                    () -> testdataFactory.findOrCreateSoftwareModuleType(TestdataFactory.SM_TYPE_APP, Integer.MAX_VALUE));
+            appType = WithSpringAuthorityRule.runAsPrivileged(() -> softwareModuleTypeManagement
+                    .update(entityFactory.softwareModuleType().update(appType.getId()).description(description)));
 
-        runtimeType = WithSpringAuthorityRule
-                .runAsPrivileged(() -> testdataFactory.findOrCreateSoftwareModuleType(TestdataFactory.SM_TYPE_RT));
-        runtimeType = WithSpringAuthorityRule.runAsPrivileged(() -> softwareModuleTypeManagement
-                .update(entityFactory.softwareModuleType().update(runtimeType.getId()).description(description)));
+            runtimeType = WithSpringAuthorityRule
+                    .runAsPrivileged(() -> testdataFactory.findOrCreateSoftwareModuleType(TestdataFactory.SM_TYPE_RT));
+            runtimeType = WithSpringAuthorityRule.runAsPrivileged(() -> softwareModuleTypeManagement
+                    .update(entityFactory.softwareModuleType().update(runtimeType.getId()).description(description)));
 
-        standardDsType = WithSpringAuthorityRule.runAsPrivileged(() -> testdataFactory.findOrCreateDefaultTestDsType());
-
-        // publish the reset counter market event to reset the counters after
-        // setup. The setup is transparent by the test and its @ExpectedEvent
-        // counting so we reset the counter here after the setup. Note that this
-        // approach is only working when using a single-thread executor in the
-        // ApplicationEventMultiCaster which the TestConfiguration is doing so
-        // the order of the events keep the same.
-        EventVerifier.publishResetMarkerEvent(eventPublisher);
-
+            standardDsType = WithSpringAuthorityRule.runAsPrivileged(() -> testdataFactory.findOrCreateDefaultTestDsType());
+        } catch (final TenantNotExistException e) {
+            LOG.warn("Not creating default software types since tenant {} has autoCreate = false",
+                    tenantAware.getCurrentTenant());
+            LOG.trace("", e);
+        }
     }
 
     private static String artifactDirectory = Files.createTempDir().getAbsolutePath() + "/"

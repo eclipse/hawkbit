@@ -8,12 +8,22 @@
  */
 package org.eclipse.hawkbit.repository.test.util;
 
-import java.lang.annotation.Annotation;
+import static java.lang.reflect.Modifier.isPublic;
+import static java.lang.reflect.Modifier.isStatic;
+
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.hawkbit.im.authentication.SpPermission;
 import org.eclipse.hawkbit.im.authentication.TenantAwareAuthenticationDetails;
@@ -22,104 +32,114 @@ import org.eclipse.hawkbit.repository.model.helper.SystemManagementHolder;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextImpl;
 
 public class WithSpringAuthorityRule implements BeforeEachCallback, AfterEachCallback {
+    private static final Logger LOGGER = LoggerFactory.getLogger(WithSpringAuthorityRule.class);
 
-    private  SecurityContext oldContext;
+    private static final ThreadLocal<WithUser> TEST_SECURITY_CONTEXT = new InheritableThreadLocal<>();
+    private static final ThreadLocal<SecurityContext> OLD_TEST_SECURITY_CONTEXT = new InheritableThreadLocal<>();
+    private final Map<String, WithUser> securityContexts = new ConcurrentHashMap<>(1000);
 
     @Override
-    public void beforeEach(ExtensionContext context) throws Exception {
-        oldContext = SecurityContextHolder.getContext();
-        WithUser annotation = getWithUserAnnotation(context);
+    public void beforeEach(final ExtensionContext extensionContext) throws Exception {
+        OLD_TEST_SECURITY_CONTEXT.set(SecurityContextHolder.getContext());
+
+        final WithUser annotation = getWithUserAnnotation(extensionContext);
         if (annotation != null) {
             if (annotation.autoCreateTenant()) {
                 createTenant(annotation.tenantId());
             }
+            LOGGER.info("Setting security context for tenant {}", annotation.tenantId());
             setSecurityContext(annotation);
         }
     }
 
-    private WithUser getWithUserAnnotation(ExtensionContext context) {
-        if (context.getRequiredTestMethod().isAnnotationPresent(WithUser.class)) {
-            return context.getRequiredTestMethod().getAnnotation(WithUser.class);
+    @Override
+    public void afterEach(final ExtensionContext extensionContext) throws Exception {
+        after(OLD_TEST_SECURITY_CONTEXT.get());
+        TEST_SECURITY_CONTEXT.remove();
+        OLD_TEST_SECURITY_CONTEXT.remove();
+    }
+
+    private WithUser getWithUserAnnotation(final ExtensionContext ctx) {
+        return securityContexts.computeIfAbsent(ctx.getRequiredTestClass().getSimpleName() + ctx.getRequiredTestMethod().getName(),
+                s -> getMethodAnnotation(ctx.getRequiredTestMethod())
+                        .map(WithSpringAuthorityRule::createWithUser)
+                        .orElseGet(() -> getTestClassAnnotation(ctx)));
+    }
+
+    private static Optional<WithUser> getMethodAnnotation(final Method method) {
+        final WithUser methodAnnotation = method.getAnnotation(WithUser.class);
+        return Optional.ofNullable(methodAnnotation);
+    }
+
+    private WithUser getTestClassAnnotation(final ExtensionContext description) {
+        final Class<?> testClass = description.getRequiredTestClass();
+        final WithUser withUser = securityContexts.computeIfAbsent(testClass.getName(),
+                className -> testClass.getAnnotation(WithUser.class));
+
+        return withUser.autoCreateTenant() ? createWithUser(withUser) : withUser;
+    }
+
+    private static void setSecurityContext(final WithUser annotation) {
+        TEST_SECURITY_CONTEXT.set(annotation);
+        final String[] authorities = annotation.allSpPermissions() ? getAllAuthorities(annotation.authorities(),
+                        new HashSet<>(Arrays.asList(annotation.removeFromAllPermission()))) :
+                annotation.authorities();
+
+        final TestingAuthenticationToken testingAuthenticationToken = new TestingAuthenticationToken(
+                new UserPrincipal(annotation.principal(), annotation.principal(), annotation.principal(),
+                        annotation.principal(), null, annotation.tenantId()),
+                annotation.credentials(), authorities);
+        testingAuthenticationToken.setDetails(
+                new TenantAwareAuthenticationDetails(annotation.tenantId(), annotation.controller()));
+
+        SecurityContextHolder.setContext(new SecurityContextImpl(testingAuthenticationToken));
+    }
+
+    private static String[] getAllAuthorities(final String[] additionalAuthorities, final Set<String> notInclude) {
+        final Field[] declaredFields = SpPermission.class.getDeclaredFields();
+        final List<String> allPermissions = new ArrayList<>();
+
+        for (Field f : declaredFields) {
+            if (isPublic(f.getModifiers()) && isStatic(f.getModifiers())) {
+                String suppress = suppress(() -> (String) f.get(null));
+                if (!notInclude.contains(suppress)) {
+                    allPermissions.add(suppress);
+                }
+            }
         }
-        if(context.getRequiredTestClass().isAnnotationPresent(WithUser.class)){
-            return context.getRequiredTestClass().getAnnotation(WithUser.class);
+
+        allPermissions.addAll(Arrays.asList(additionalAuthorities));
+        return allPermissions.toArray(new String[0]);
+    }
+
+    private static <T> T suppress(final Callable<T> callable) {
+        try {
+            return callable.call();
+        } catch (Exception e) {
+            // don't want to log this exceptions.
         }
         return null;
     }
 
-    @Override
-    public void afterEach(ExtensionContext context) throws Exception {
+    private static void after(final SecurityContext oldContext) {
         SecurityContextHolder.setContext(oldContext);
     }
 
-    private static  void setSecurityContext(final WithUser annotation) {
-        SecurityContextHolder.setContext(new SecurityContext() {
-            private static final long serialVersionUID = 1L;
-
-            @Override
-            public void setAuthentication(final Authentication authentication) {
-                // nothing todo
-            }
-
-            @Override
-            public Authentication getAuthentication() {
-                final String[] authorities;
-                if (annotation.allSpPermissions()) {
-                    authorities = getAllAuthorities(annotation.authorities(), annotation.removeFromAllPermission());
-                } else {
-                    authorities = annotation.authorities();
-                }
-                final TestingAuthenticationToken testingAuthenticationToken = new TestingAuthenticationToken(
-                        new UserPrincipal(annotation.principal(), annotation.principal(), annotation.principal(),
-                                annotation.principal(), null, annotation.tenantId()),
-                        annotation.credentials(), authorities);
-                testingAuthenticationToken.setDetails(
-                        new TenantAwareAuthenticationDetails(annotation.tenantId(), annotation.controller()));
-                return testingAuthenticationToken;
-            }
-
-            private String[] getAllAuthorities(final String[] additionalAuthorities, final String[] notInclude) {
-                final List<String> allPermissions = new ArrayList<>();
-                final Field[] declaredFields = SpPermission.class.getDeclaredFields();
-                for (final Field field : declaredFields) {
-                    if (Modifier.isPublic(field.getModifiers()) && Modifier.isStatic(field.getModifiers())) {
-                        field.setAccessible(true);
-                        try {
-                            boolean addPermission = true;
-                            final String permissionName = (String) field.get(null);
-                            if (notInclude != null) {
-                                for (final String notInlcudePerm : notInclude) {
-                                    if (permissionName.equals(notInlcudePerm)) {
-                                        addPermission = false;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (addPermission) {
-                                allPermissions.add(permissionName);
-                            }
-                            // don't want to log this exceptions.
-                        } catch (@SuppressWarnings("squid:S1166") IllegalArgumentException | IllegalAccessException e) {
-                            // nope
-                        }
-                    }
-                }
-                for (final String authority : additionalAuthorities) {
-                    allPermissions.add(authority);
-                }
-                return allPermissions.toArray(new String[allPermissions.size()]);
-            }
-        });
-    }
-
-    public static <T> T  runAsPrivileged(final Callable<T> callable) throws Exception {
-        return runAs(privilegedUser(), callable);
+    public static <T> T runAsPrivileged(final Callable<T> callable) throws Exception {
+        if(TEST_SECURITY_CONTEXT.get() == null || !TEST_SECURITY_CONTEXT.get().autoCreateTenant()){
+            callable.call();
+        }
+        final WithUser withUser = privilegedUser();
+        return runAs(withUser, callable);
     }
 
     public static <T> T  runAs(final WithUser withUser, final Callable<T> callable) throws Exception {
@@ -131,7 +151,7 @@ public class WithSpringAuthorityRule implements BeforeEachCallback, AfterEachCal
         try {
             return callable.call();
         } finally {
-            SecurityContextHolder.setContext(oldContext);
+            after(oldContext);
         }
     }
 
@@ -141,28 +161,37 @@ public class WithSpringAuthorityRule implements BeforeEachCallback, AfterEachCal
         try {
             SystemManagementHolder.getInstance().getSystemManagement().getTenantMetadata(tenantId);
         } finally {
-            SecurityContextHolder.setContext(oldContext);
+            after(oldContext);
         }
     }
 
     public static WithUser withController(final String principal, final String... authorities) {
-        return withUserAndTenant(principal, "default", true, true, true, authorities);
+        final String tenantId = TEST_SECURITY_CONTEXT.get() != null ? TEST_SECURITY_CONTEXT.get().tenantId() : "";
+        return withUserAndTenant(principal, tenantId, true, true, true, authorities);
     }
 
     public static WithUser withUser(final String principal, final String... authorities) {
-        return withUserAndTenant(principal, "default", true, true, false, authorities);
+        final String tenantId = TEST_SECURITY_CONTEXT.get() != null ? TEST_SECURITY_CONTEXT.get().tenantId() : "";
+        return withUserAndTenant(principal, tenantId, true, true, false, authorities);
     }
 
     public static WithUser withUser(final String principal, final boolean allSpPermision, final String... authorities) {
-        return withUserAndTenant(principal, "default", true, allSpPermision, false, authorities);
+        final String tenantId = TEST_SECURITY_CONTEXT.get() != null ? TEST_SECURITY_CONTEXT.get().tenantId() : "";
+        return withUserAndTenant(principal, tenantId, true, allSpPermision, false, authorities);
     }
 
     public static WithUser withUser(final boolean autoCreateTenant) {
-        return withUserAndTenant("bumlux", "default", autoCreateTenant, true, false, new String[] {});
+        final String tenantId = TEST_SECURITY_CONTEXT.get() != null ? TEST_SECURITY_CONTEXT.get().tenantId() : "";
+        return withUserAndTenant("", tenantId, autoCreateTenant, true, false);
     }
 
     public static WithUser withUserAndTenant(final String principal, final String tenant, final String... authorities) {
-        return withUserAndTenant(principal, tenant, true, true, false, new String[] {});
+        return withUserAndTenant(principal, tenant, true, true, false, authorities);
+    }
+
+    public static WithUser withUserAndTenant(final String principal, final String tenant,
+            final boolean autoCreateTenant, final boolean allSpPermission) {
+        return withUserAndTenant(principal, tenant, autoCreateTenant, allSpPermission, false);
     }
 
     public static WithUser withUserAndTenant(final String principal, final String tenant,
@@ -172,58 +201,25 @@ public class WithSpringAuthorityRule implements BeforeEachCallback, AfterEachCal
     }
 
     private static WithUser privilegedUser() {
-        return createWithUser("bumlux", "default", true, true, false,
-                new String[] { "ROLE_CONTROLLER", "ROLE_SYSTEM_CODE" });
+        final String tenant = TEST_SECURITY_CONTEXT.get() == null ? "" : TEST_SECURITY_CONTEXT.get().tenantId();
+        return createWithUser("", tenant, true, true, false, new String[] { "ROLE_CONTROLLER", "ROLE_SYSTEM_CODE" });
+    }
+
+    private static WithUser createWithUser(final WithUser annotation) {
+        return createWithUser(annotation.principal(), annotation.tenantId(), annotation.autoCreateTenant(),
+                annotation.allSpPermissions(), annotation.controller(),
+                Arrays.asList(annotation.removeFromAllPermission()), annotation.authorities());
     }
 
     private static WithUser createWithUser(final String principal, final String tenant, final boolean autoCreateTenant,
-            final boolean allSpPermission, final boolean controller, final String... authorities) {
-        return new WithUser() {
-
-            @Override
-            public Class<? extends Annotation> annotationType() {
-                return WithUser.class;
-            }
-
-            @Override
-            public String principal() {
-                return principal;
-            }
-
-            @Override
-            public String credentials() {
-                return null;
-            }
-
-            @Override
-            public String[] authorities() {
-                return authorities;
-            }
-
-            @Override
-            public boolean allSpPermissions() {
-                return allSpPermission;
-            }
-
-            @Override
-            public String[] removeFromAllPermission() {
-                return new String[0];
-            }
-
-            @Override
-            public String tenantId() {
-                return tenant;
-            }
-
-            @Override
-            public boolean autoCreateTenant() {
-                return autoCreateTenant;
-            }
-
-            @Override
-            public boolean controller() {
-                return controller;
-            }
-        };
+            final boolean allSpPermission, final boolean controller, final String[] authorities) {
+        return createWithUser(principal, tenant, autoCreateTenant, allSpPermission, controller, Collections.emptyList(),
+                authorities);
+    }
+    private static WithUser createWithUser(final String principal, final String tenant, final boolean autoCreateTenant,
+            final boolean allSpPermission, final boolean controller, final List<String> removeFromAllPermission,
+            final String[] authorities) {
+        return new DefaultWithUser(principal, tenant, authorities, allSpPermission, removeFromAllPermission,
+                autoCreateTenant, controller);
     }
 }

@@ -28,7 +28,7 @@ public @interface WithUser {
      * 
      * @return test principal
      */
-    String principal() default "TestPrincipal";
+    String principal() default "";
 
     /**
      * Gets the test credentials.
@@ -42,7 +42,7 @@ public @interface WithUser {
      * 
      * @return test tenant id
      */
-    String tenantId() default "default";
+    String tenantId() default "";
 
     /**
      * Should tenant auto created.

@@ -8,18 +8,27 @@
  */
 package org.eclipse.hawkbit.integration.listener;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.eclipse.hawkbit.rabbitmq.test.listener.TestRabbitListener;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 
 public class DeadletterListener implements TestRabbitListener {
 
-    public static final String LISTENER_ID = "deadletter";
+    private final AtomicInteger messageCount = new AtomicInteger(0);
 
     @Override
     @RabbitListener(id = "deadletter", queues = "dmf_connector_deadletter_ttl")
-    public void handleMessage(Message message) {
-        // currently the message is not needed
+    public void handleMessage(final Message message) {
+        messageCount.incrementAndGet();
     }
 
+    public int getMessageCount() {
+        return messageCount.get();
+    }
+
+    public void reset() {
+        messageCount.set(0);
+    }
 }

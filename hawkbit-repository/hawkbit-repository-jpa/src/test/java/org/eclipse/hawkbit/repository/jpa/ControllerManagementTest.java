@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -744,7 +745,7 @@ public class ControllerManagementTest extends AbstractJpaIntegrationTest {
             @Expect(type = TargetAttributesRequestedEvent.class, count = 1),
             @Expect(type = SoftwareModuleCreatedEvent.class, count = 3) })
     public void tryToFinishUpdateProcessMoreThanOnce() {
-        final Long actionId = prepareFinishedUpdate().getId();
+        final Long actionId = prepareFinishedUpdate(DEFAULT_CONTROLLER_ID, UUID.randomUUID().toString(), false).getId();
 
         // try with disabled late feedback
         repositoryProperties.setRejectActionStatusForClosedAction(true);
@@ -783,7 +784,7 @@ public class ControllerManagementTest extends AbstractJpaIntegrationTest {
     public void sendUpdatesForFinishUpdateProcessDroppedIfDisabled() {
         repositoryProperties.setRejectActionStatusForClosedAction(true);
 
-        final Action action = prepareFinishedUpdate();
+        final Action action = prepareFinishedUpdate(DEFAULT_CONTROLLER_ID, UUID.randomUUID().toString(), false);
 
         controllerManagement.addUpdateActionStatus(
                 entityFactory.actionStatus().create(action.getId()).status(Action.Status.RUNNING));
@@ -810,7 +811,7 @@ public class ControllerManagementTest extends AbstractJpaIntegrationTest {
     public void sendUpdatesForFinishUpdateProcessAcceptedIfEnabled() {
         repositoryProperties.setRejectActionStatusForClosedAction(false);
 
-        Action action = prepareFinishedUpdate();
+        Action action = prepareFinishedUpdate(DEFAULT_CONTROLLER_ID, UUID.randomUUID().toString(), false);
         action = controllerManagement.addUpdateActionStatus(
                 entityFactory.actionStatus().create(action.getId()).status(Action.Status.RUNNING));
 
@@ -1362,9 +1363,7 @@ public class ControllerManagementTest extends AbstractJpaIntegrationTest {
 
         final List<Action> foundAction = controllerManagement.getActiveActionsByExternalRef(allExternalRef);
         assertThat(foundAction).isNotNull();
-        for (int i = 0; i < numberOfActions; i++) {
-            assertThat(foundAction.get(i).getId()).isEqualTo(allActionId.get(i));
-        }
+        assertThat(foundAction.stream().map(Action::getId)).containsExactlyInAnyOrderElementsOf(allActionId);
     }
 
     @Test

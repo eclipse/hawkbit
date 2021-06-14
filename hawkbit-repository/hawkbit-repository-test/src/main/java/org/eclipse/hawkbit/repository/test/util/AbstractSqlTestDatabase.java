@@ -8,48 +8,47 @@
  */
 package org.eclipse.hawkbit.repository.test.util;
 
+import static java.sql.DriverManager.getConnection;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.test.context.TestContext;
 import org.springframework.test.context.TestExecutionListener;
 import org.springframework.test.context.support.AbstractTestExecutionListener;
+import org.springframework.util.AntPathMatcher;
 
 /**
- * A {@link TestExecutionListener} for creating and dropping MySql schemas if
- * tests are setup with MySql.
+ * A {@link TestExecutionListener} for creating and dropping SQL schemas if
+ * tests are setup with an SQL schema.
  */
 public abstract class AbstractSqlTestDatabase extends AbstractTestExecutionListener {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractSqlTestDatabase.class);
-    protected String schemaName;
-    protected String uri;
-    protected String username;
-    protected String password;
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractSqlTestDatabase.class);
+    protected static final AntPathMatcher MATCHER = new AntPathMatcher();
 
-    @Override
-    public void beforeTestClass(final TestContext testContext) throws Exception {
-        if (isRunningWithSql()) {
-            LOG.info("Setting up database for test class {}", testContext.getTestClass().getName());
-            this.username = System.getProperty("spring.datasource.username");
-            this.password = System.getProperty("spring.datasource.password");
-            this.uri = System.getProperty("spring.datasource.url");
-            createSchemaUri();
-            createSchema();
-        }
+    protected final DatasourceContext context;
+
+    public AbstractSqlTestDatabase(final DatasourceContext context) {
+        this.context = context;
     }
 
-    @Override
-    public void afterTestClass(final TestContext testContext) throws Exception {
-        if (isRunningWithSql()) {
-            dropSchema();
+    protected abstract AbstractSqlTestDatabase createRandomSchema();
+
+    protected abstract void dropRandomSchema();
+
+    protected abstract String getRandomSchemaUri();
+
+    protected void executeStatement(final String uri, final String statement) {
+        LOGGER.trace("\033[0;33m Executing statement {} on uri {} \033[0m", statement, uri);
+
+        try (final Connection connection = getConnection(uri, context.getUsername(), context.getPassword());
+             final PreparedStatement preparedStatement = connection.prepareStatement(statement)) {
+            preparedStatement.execute();
+        } catch (final SQLException e) {
+            LOGGER.error("Execution of statement '{}' on uri {} failed!", statement, uri, e);
         }
     }
-
-    protected abstract void createSchemaUri();
-
-    protected abstract boolean isRunningWithSql();
-
-    protected abstract void createSchema();
-
-    protected abstract void dropSchema();
 }

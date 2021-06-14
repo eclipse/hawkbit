@@ -30,6 +30,7 @@ import org.eclipse.hawkbit.repository.event.ApplicationEventFilter;
 import org.eclipse.hawkbit.repository.model.helper.EventPublisherHolder;
 import org.eclipse.hawkbit.repository.rsql.VirtualPropertyReplacer;
 import org.eclipse.hawkbit.repository.rsql.VirtualPropertyResolver;
+import org.eclipse.hawkbit.repository.test.util.TenantEventCounter;
 import org.eclipse.hawkbit.repository.test.util.RolloutTestApprovalStrategy;
 import org.eclipse.hawkbit.repository.test.util.TestdataFactory;
 import org.eclipse.hawkbit.security.DdiSecurityProperties;
@@ -43,6 +44,7 @@ import org.eclipse.hawkbit.tenancy.UserAuthoritiesResolver;
 import org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties;
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.aop.interceptor.SimpleAsyncUncaughtExceptionHandler;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.CacheManager;
@@ -147,19 +149,26 @@ public class TestConfiguration implements AsyncConfigurer {
         return new DefaultDownloadIdCache(cacheManager);
     }
 
+    @Bean
+    TenantEventCounter tenantEventCounter() {
+        return new TenantEventCounter();
+    }
+
     @Bean(name = AbstractApplicationContext.APPLICATION_EVENT_MULTICASTER_BEAN_NAME)
-    SimpleApplicationEventMulticaster applicationEventMulticaster(final ApplicationEventFilter applicationEventFilter) {
-        final SimpleApplicationEventMulticaster simpleApplicationEventMulticaster = new FilterEnabledApplicationEventPublisher(
-                applicationEventFilter);
+    SimpleApplicationEventMulticaster applicationEventMulticaster() {
+        final SimpleApplicationEventMulticaster simpleApplicationEventMulticaster = new FilterEnabledApplicationEventPublisher();
         simpleApplicationEventMulticaster.setTaskExecutor(asyncExecutor());
+        simpleApplicationEventMulticaster.addApplicationListener(tenantEventCounter());
         return simpleApplicationEventMulticaster;
     }
 
     private static class FilterEnabledApplicationEventPublisher extends SimpleApplicationEventMulticaster {
 
-        private final ApplicationEventFilter applicationEventFilter;
+        @Autowired
+        private ApplicationEventFilter applicationEventFilter;
 
-        FilterEnabledApplicationEventPublisher(final ApplicationEventFilter applicationEventFilter) {
+        @Autowired
+        public void setApplicationEventFilter(final ApplicationEventFilter applicationEventFilter) {
             this.applicationEventFilter = applicationEventFilter;
         }
 

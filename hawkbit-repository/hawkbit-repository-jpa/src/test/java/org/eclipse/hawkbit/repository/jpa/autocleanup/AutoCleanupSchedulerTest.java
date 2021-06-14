@@ -9,15 +9,25 @@
 package org.eclipse.hawkbit.repository.jpa.autocleanup;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
-import org.eclipse.hawkbit.repository.jpa.AbstractJpaIntegrationTest;
+import org.eclipse.hawkbit.repository.SystemManagement;
+import org.eclipse.hawkbit.security.SecurityContextTenantAware;
+import org.eclipse.hawkbit.security.SystemSecurityContext;
+import org.eclipse.hawkbit.tenancy.TenantAware;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.Mock;
 import org.springframework.integration.support.locks.LockRegistry;
+import org.springframework.integration.support.locks.DefaultLockRegistry;
 
 import io.qameta.allure.Description;
 import io.qameta.allure.Feature;
@@ -29,23 +39,33 @@ import io.qameta.allure.Story;
  */
 @Feature("Component Tests - Repository")
 @Story("Auto cleanup scheduler")
-public class AutoCleanupSchedulerTest extends AbstractJpaIntegrationTest {
+@ExtendWith(MockitoExtension.class)
+public class AutoCleanupSchedulerTest {
 
     private final AtomicInteger counter = new AtomicInteger();
 
-    @Autowired
-    private LockRegistry lockRegistry;
+    private final LockRegistry lockRegistry = new DefaultLockRegistry();
+    private final TenantAware tenantAware = new SecurityContextTenantAware((tenant, username) -> Collections.emptyList());
+    private final SystemSecurityContext securityContext = new SystemSecurityContext(tenantAware);
+
+    @Mock
+    private SystemManagement systemManagement;
 
     @BeforeEach
+    @SuppressWarnings("unchecked")
     public void setUp() {
         counter.set(0);
+        doAnswer(invocationOnMock -> {
+            ((Consumer<String>) invocationOnMock.getArgument(0)).accept("tenant");
+            return null;
+        }).when(systemManagement).forEachTenant(any());
     }
 
     @Test
     @Description("Verifies that all cleanup handlers are executed regardless if one of them throws an error")
     public void executeHandlerChain() {
 
-        new AutoCleanupScheduler(systemManagement, systemSecurityContext, lockRegistry, Arrays.asList(
+        new AutoCleanupScheduler(systemManagement, securityContext , lockRegistry, Arrays.asList(
                 new SuccessfulCleanup(), new SuccessfulCleanup(), new FailingCleanup(), new SuccessfulCleanup())).run();
 
         assertThat(counter.get()).isEqualTo(4);

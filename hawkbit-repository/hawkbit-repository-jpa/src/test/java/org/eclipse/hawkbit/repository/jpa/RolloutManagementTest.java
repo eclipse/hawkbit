@@ -50,6 +50,7 @@ import org.eclipse.hawkbit.repository.exception.MultiAssignmentIsNotEnabledExcep
 import org.eclipse.hawkbit.repository.exception.RolloutIllegalStateException;
 import org.eclipse.hawkbit.repository.jpa.model.JpaAction;
 import org.eclipse.hawkbit.repository.jpa.model.JpaRollout;
+import org.eclipse.hawkbit.repository.jpa.model.JpaRolloutGroup;
 import org.eclipse.hawkbit.repository.jpa.utils.MultipleInvokeHelper;
 import org.eclipse.hawkbit.repository.jpa.utils.SuccessCondition;
 import org.eclipse.hawkbit.repository.model.Action;
@@ -72,10 +73,10 @@ import org.eclipse.hawkbit.repository.model.TotalTargetCountStatus;
 import org.eclipse.hawkbit.repository.test.matcher.Expect;
 import org.eclipse.hawkbit.repository.test.matcher.ExpectEvents;
 import org.eclipse.hawkbit.tenancy.configuration.TenantConfigurationProperties.TenantConfigurationKey;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
@@ -1689,13 +1690,15 @@ public class RolloutManagementTest extends AbstractJpaIntegrationTest {
 
         // test
         rolloutManagement.delete(createdRollout.getId());
+        final Page<RolloutGroup> rolloutGroups = rolloutGroupManagement.findByRollout(Pageable.unpaged(), createdRollout.getId());
         rolloutManagement.handleRollouts();
 
         // verify
         final Optional<JpaRollout> deletedRollout = rolloutRepository.findById(createdRollout.getId());
         assertThat(deletedRollout).isNotPresent();
         assertThat(rolloutGroupRepository.count()).isZero();
-        assertThat(rolloutTargetGroupRepository.count()).isZero();
+        rolloutGroups.forEach(group -> assertThat(
+                rolloutTargetGroupRepository.countByRolloutGroup((JpaRolloutGroup) group)).isZero());
     }
 
     @Test

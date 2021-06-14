@@ -207,6 +207,7 @@
       <!-- Maven Surefire settings -->
       <!-- ************************ -->
       <surefire.forkcount>1</surefire.forkcount>
+      <surefire.threadCount>4</surefire.threadCount>
    </properties>
 
    <build>
@@ -413,8 +414,11 @@
                   </systemPropertyVariables>
                   <!-- Bugfix for OpenJDK 8u181, see https://issues.apache.org/jira/browse/SUREFIRE-1588 -->
                   <useSystemClassLoader>false</useSystemClassLoader>
+                  <parallel>methods</parallel>
                   <reuseForks>true</reuseForks>
                   <forkCount>${surefire.forkcount}</forkCount>
+                  <perCoreThreadCount>true</perCoreThreadCount>
+                  <threadCount>${surefire.threadCount}</threadCount>
                   <argLine>
                      ${jacoco.agent.ut.arg}
                   </argLine>

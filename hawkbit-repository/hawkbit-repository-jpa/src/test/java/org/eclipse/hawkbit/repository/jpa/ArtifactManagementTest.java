@@ -18,6 +18,7 @@ import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import javax.validation.ConstraintViolationException;
@@ -399,8 +400,8 @@ public class ArtifactManagementTest extends AbstractJpaIntegrationTest {
     @Test
     @Description("Verifies that you can not delete artifacts from another tenant which exists in another tenant with the same hash and the SoftwareModule is not deleted")
     public void deleteArtifactWithSameHashAndSoftwareModuleIsNotDeletedInDifferentTenants() throws Exception {
-        final String tenant1 = "mytenant";
-        final String tenant2 = "tenant2";
+        final String tenant1 = UUID.randomUUID().toString();
+        final String tenant2 = UUID.randomUUID().toString();
 
         final SoftwareModule module = createSoftwareModuleForTenant(tenant1);
         final SoftwareModule module2 = createSoftwareModuleForTenant(tenant2);
