@@ -167,7 +167,7 @@
       <allure.version>2.13.6</allure.version>
       <eclipselink.version>2.7.3</eclipselink.version>
       <gwtmockito.version>1.1.8</gwtmockito.version>
-      <guava.version>25.0-jre</guava.version>
+      <guava.version>29.0-jre</guava.version>
       <javax.el-api.version>2.2.4</javax.el-api.version>
       <corn-cps.version>1.1.7</corn-cps.version>
       <jlorem.version>1.1</jlorem.version>
