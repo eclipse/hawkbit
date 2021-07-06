@@ -79,7 +79,7 @@ public class ControllerPreAuthenticatedSecurityHeaderFilter extends AbstractCont
     public HeaderAuthentication getPreAuthenticatedPrincipal(final DmfTenantSecurityToken secruityToken) {
         // retrieve the common name header and the authority name header from
         // the http request and combine them together
-        final String commonNameValue = secruityToken.getHeader(caCommonNameHeader);
+        final String commonNameValue = getCommonNameHeader(secruityToken);
         final String knownSslIssuerConfigurationValue = tenantAware.runAsTenant(secruityToken.getTenant(),
                 sslIssuerNameConfigTenantRunner);
         final String sslIssuerHashValue = getIssuerHashHeader(secruityToken, knownSslIssuerConfigurationValue);
@@ -104,7 +104,7 @@ public class ControllerPreAuthenticatedSecurityHeaderFilter extends AbstractCont
         // in case of legacy download artifact, the controller ID is not in the
         // URL path, so then we just use the common name header
         if (controllerId == null || "anonymous".equals(controllerId)) {
-            controllerId = secruityToken.getHeader(caCommonNameHeader);
+            controllerId = getCommonNameHeader(secruityToken);
         }
 
         final List<String> knownHashes = splitMultiHashBySemicolon(authorityNameConfigurationValue);
@@ -121,25 +121,50 @@ public class ControllerPreAuthenticatedSecurityHeaderFilter extends AbstractCont
      * this request for this tenant.
      */
     private String getIssuerHashHeader(final DmfTenantSecurityToken secruityToken, final String knownIssuerHashes) {
+        String foundHash;
         // there may be several knownIssuerHashes configured for the tenant
         final List<String> knownHashes = splitMultiHashBySemicolon(knownIssuerHashes);
-
-        // iterate over the headers until we get a null header.
-        int iHeader = 1;
-        String foundHash;
-        while ((foundHash = secruityToken.getHeader(String.format(sslIssuerHashBasicHeader, iHeader))) != null) {
-            if (knownHashes.contains(foundHash.toLowerCase())) {
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Found matching ssl issuer hash at position {}", iHeader);
+        if (sslIssuerHashBasicHeader.contains("%d")) {
+            // iterate over the headers until we get a null header.
+            int iHeader = 1;
+            while ((foundHash = secruityToken.getHeader(String.format(sslIssuerHashBasicHeader, iHeader))) != null) {
+                if (knownHashes.contains(foundHash.toLowerCase())) {
+                    if (LOGGER.isTraceEnabled()) {
+                        LOGGER.trace("Found matching ssl issuer hash at position {}", iHeader);
+                    }
+                    return foundHash.toLowerCase();
                 }
-                return foundHash.toLowerCase();
+                iHeader++;
             }
-            iHeader++;
+        } else if ((foundHash = secruityToken.getHeader(sslIssuerHashBasicHeader)) != null && knownHashes.contains(foundHash.toLowerCase())) {
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace("Found matching ssl issuer hashes");
+            }
+            return foundHash.toLowerCase();
         }
         LOG_SECURITY_AUTH.debug(
                 "Certifacte request but no matching hash found in headers {} for common name {} in request",
-                sslIssuerHashBasicHeader, secruityToken.getHeader(caCommonNameHeader));
+                sslIssuerHashBasicHeader, getCommonNameHeader(secruityToken));
         return null;
+    }
+
+    private String getCommonNameHeader(final DmfTenantSecurityToken secruityToken) {
+        String header = secruityToken.getHeader(caCommonNameHeader);
+        if (header == null) {
+            return null;
+        }
+        int begin = header.indexOf("CN=");
+        if (begin == -1) {
+            return header;
+        } else {
+            begin += 3;
+        }
+        int end = header.indexOf(",", begin);
+        if (end == -1) {
+            return header.substring(begin);
+        } else {
+            return header.substring(begin, end);
+        }
     }
 
     @Override
@@ -156,6 +181,6 @@ public class ControllerPreAuthenticatedSecurityHeaderFilter extends AbstractCont
     }
 
     private static List<String> splitMultiHashBySemicolon(final String knownIssuerHashes) {
-        return Arrays.stream(knownIssuerHashes.split(";|,")).map(String::toLowerCase).collect(Collectors.toList());
+        return Arrays.stream(knownIssuerHashes.split(";")).map(String::toLowerCase).collect(Collectors.toList());
     }
 }
