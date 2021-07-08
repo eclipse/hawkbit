@@ -31,6 +31,13 @@ In addition, the following vendors offer free trial accounts for their Eclipse h
 | MySQL |  | &#10003; | &#10003; | 
 | RabbitMQ |  | &#10003; | &#10003; | 
 
+HawkBit Update Server docker container login credentials:
+
+| Username | Password |
+|---|---|
+| admin | admin |
+| hawkBit Update Server
+
 ### A: Run hawkBit Update Server as Docker Container
 
 Start the hawkBit Update Server as a single container

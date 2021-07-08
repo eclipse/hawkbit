@@ -31,6 +31,8 @@ services:
 
   # ---------------------
   # hawkBit simulator
+  # username: admin
+  # password: admin
   # ---------------------
   simulator:
     image: "hawkbit/hawkbit-device-simulator:latest"
@@ -79,7 +81,7 @@ services:
         condition: on-failure
     environment:
       MYSQL_DATABASE: "hawkbit"
-      MYSQL_USER: "root"
+      # MYSQL_USER: "root" is created by default in the container for mysql 5.7+
       MYSQL_ALLOW_EMPTY_PASSWORD: "true"
 
 
