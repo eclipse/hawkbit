@@ -27,7 +27,7 @@ public class MgmtSoftwareModuleType extends MgmtNamedEntity {
     @JsonProperty(value = "id", required = true)
     private Long moduleId;
 
-    @JsonProperty
+    @JsonProperty(required = true)
     private String key;
 
     @JsonProperty

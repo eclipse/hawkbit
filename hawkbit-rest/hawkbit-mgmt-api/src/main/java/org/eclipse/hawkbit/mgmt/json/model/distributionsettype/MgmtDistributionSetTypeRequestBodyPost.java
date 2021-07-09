@@ -23,7 +23,7 @@ public class MgmtDistributionSetTypeRequestBodyPost extends MgmtDistributionSetT
     @JsonProperty(required = true)
     private String name;
 
-    @JsonProperty
+    @JsonProperty(required = true)
     private String key;
 
     @JsonProperty
