@@ -103,7 +103,7 @@ public class MgmtRolloutResourceTest extends AbstractManagementApiIntegrationTes
     public void createRolloutWithNotWellFormedFilterReturnsBadRequest() throws Exception {
         final DistributionSet dsA = testdataFactory.createDistributionSet("");
         mvc.perform(post("/rest/v1/rollouts")
-                .content(JsonBuilder.rollout("name", "desc", 10, dsA.getId(), "name=test", null))
+                .content(JsonBuilder.rollout("name", "desc", 5, dsA.getId(), "name=test", null))
                 .contentType(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_JSON))
                 .andDo(MockMvcResultPrinter.print()).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("errorCode", equalTo("hawkbit.server.error.rest.param.rsqlParamSyntax")))
@@ -131,7 +131,7 @@ public class MgmtRolloutResourceTest extends AbstractManagementApiIntegrationTes
         testdataFactory.createTargets(20, "target", "rollout");
 
         final DistributionSet dsA = testdataFactory.createDistributionSet("");
-        postRollout("rollout1", 10, dsA.getId(), "id==target*", 20, Action.ActionType.FORCED);
+        postRollout("rollout1", 5, dsA.getId(), "id==target*", 20, Action.ActionType.FORCED);
     }
 
     @Test
@@ -368,7 +368,7 @@ public class MgmtRolloutResourceTest extends AbstractManagementApiIntegrationTes
         testdataFactory.createTargets(20, "target", "rollout");
 
         // setup - create 2 rollouts
-        postRollout("rollout1", 10, dsA.getId(), "id==target*", 20, Action.ActionType.FORCED);
+        postRollout("rollout1", 5, dsA.getId(), "id==target*", 20, Action.ActionType.FORCED);
         postRollout("rollout2", 5, dsA.getId(), "id==target-0001*", 10, Action.ActionType.FORCED);
 
         // Run here, because Scheduler is disabled during tests
@@ -409,7 +409,7 @@ public class MgmtRolloutResourceTest extends AbstractManagementApiIntegrationTes
         testdataFactory.createTargets(20, "target", "rollout");
 
         // setup - create 2 rollouts
-        postRollout("rollout1", 10, dsA.getId(), "id==target*", 20, Action.ActionType.FORCED);
+        postRollout("rollout1", 5, dsA.getId(), "id==target*", 20, Action.ActionType.FORCED);
         postRollout("rollout2", 5, dsA.getId(), "id==target*", 20, Action.ActionType.FORCED);
 
         // Run here, because Scheduler is disabled during tests
@@ -790,7 +790,7 @@ public class MgmtRolloutResourceTest extends AbstractManagementApiIntegrationTes
     @Description("Start the rollout in async mode")
     public void startingRolloutSwitchesIntoRunningStateAsync() throws Exception {
 
-        final int amountTargets = 1000;
+        final int amountTargets = 50;
         testdataFactory.createTargets(amountTargets, "rollout", "rollout");
         final DistributionSet dsA = testdataFactory.createDistributionSet("");
 
@@ -913,7 +913,7 @@ public class MgmtRolloutResourceTest extends AbstractManagementApiIntegrationTes
         testdataFactory.createTargets(20, "target", "rollout");
 
         final DistributionSet dsA = testdataFactory.createDistributionSet("");
-        postRollout("rollout1", 10, dsA.getId(), "id==target*", 20, Action.ActionType.DOWNLOAD_ONLY);
+        postRollout("rollout1", 5, dsA.getId(), "id==target*", 20, Action.ActionType.DOWNLOAD_ONLY);
     }
 
     @Test

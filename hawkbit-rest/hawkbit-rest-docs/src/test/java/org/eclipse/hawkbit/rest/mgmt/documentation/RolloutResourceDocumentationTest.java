@@ -183,7 +183,7 @@ public class RolloutResourceDocumentationTest extends AbstractApiRestDocumentati
         final String name = "exampleRollout";
         final String type = "forced";
         final String description = "Rollout for all named targets";
-        final int groupSize = 10;
+        final int groupSize = 5;
         final Long dsId = testdataFactory.createDistributionSet().getId();
         final String targetFilter = "id==targets-*";
 
@@ -642,7 +642,7 @@ public class RolloutResourceDocumentationTest extends AbstractApiRestDocumentati
         if (isMultiAssignmentsEnabled()) {
             rolloutCreate.weight(400);
         }
-        final Rollout rollout = rolloutManagement.create(rolloutCreate, 10, new RolloutGroupConditionBuilder()
+        final Rollout rollout = rolloutManagement.create(rolloutCreate, 5, new RolloutGroupConditionBuilder()
                 .withDefaults().successCondition(RolloutGroupSuccessCondition.THRESHOLD, "10").build());
 
         // Run here, because Scheduler is disabled during tests

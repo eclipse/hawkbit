@@ -81,7 +81,7 @@ public class RolloutGroupEventTest extends AbstractRemoteEntityEventTest<Rollout
 
         final Rollout entity = rolloutManagement.create(
                 entityFactory.rollout().create().name("exampleRollout").targetFilterQuery("controllerId==*").set(ds),
-                10, new RolloutGroupConditionBuilder().withDefaults()
+                5, new RolloutGroupConditionBuilder().withDefaults()
                         .successCondition(RolloutGroupSuccessCondition.THRESHOLD, "10").build());
 
         return rolloutGroupManagement.findByRollout(PAGE, entity.getId()).getContent().get(0);

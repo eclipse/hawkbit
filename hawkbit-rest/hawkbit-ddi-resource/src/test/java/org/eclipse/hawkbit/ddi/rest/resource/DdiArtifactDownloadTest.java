@@ -170,7 +170,7 @@ public class DdiArtifactDownloadTest extends AbstractDDiApiIntegrationTest {
         final DistributionSet ds = testdataFactory.createDistributionSet("");
 
         // create artifact
-        final int artifactSize = 5 * 1024 * 1024;
+        final int artifactSize = (int) quotaManagement.getMaxArtifactSize();
         final byte random[] = RandomUtils.nextBytes(artifactSize);
         final Artifact artifact = artifactManagement.create(new ArtifactUpload(new ByteArrayInputStream(random),
                 ds.findFirstModuleByType(osType).get().getId(), "file1", false, artifactSize));
@@ -238,7 +238,7 @@ public class DdiArtifactDownloadTest extends AbstractDDiApiIntegrationTest {
         // create ds
         final DistributionSet ds = testdataFactory.createDistributionSet("");
 
-        final int resultLength = 5 * 1000 * 1024;
+        final int resultLength = (int) quotaManagement.getMaxArtifactSize();
 
         // create artifact
         final byte random[] = RandomUtils.nextBytes(resultLength);
@@ -250,7 +250,7 @@ public class DdiArtifactDownloadTest extends AbstractDDiApiIntegrationTest {
         // now assign and download successful
         assignDistributionSet(ds, targets);
 
-        final int range = 100 * 1024;
+        final int range = resultLength / 50;
 
         // full file download with standard range request
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();

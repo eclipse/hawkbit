@@ -91,17 +91,17 @@ public class SystemManagementTest extends AbstractJpaIntegrationTest {
     @Description("Checks that the system report calculates correctly the actions size of all tenants in the system")
     public void systemUsageReportCollectsActionsOfAllTenants() throws Exception {
         // Prepare tenants
-        createTestTenantsForSystemStatistics(2, 0, 100, 2);
+        createTestTenantsForSystemStatistics(2, 0, 20, 2);
 
         // 2 tenants, 100 targets each, 2 deployments per target => 400
-        assertThat(systemManagement.getSystemUsageStatistics().getOverallActions()).isEqualTo(400);
+        assertThat(systemManagement.getSystemUsageStatistics().getOverallActions()).isEqualTo(80);
 
         // per tenant data
         final List<TenantUsage> tenants = systemManagement.getSystemUsageStatisticsWithTenants().getTenants();
         assertThat(tenants).hasSize(3);
         assertThat(tenants).containsOnly(new TenantUsage("default"),
-                new TenantUsage("tenant0").setTargets(100).setActions(200),
-                new TenantUsage("tenant1").setTargets(100).setActions(200));
+                new TenantUsage("tenant0").setTargets(20).setActions(40),
+                new TenantUsage("tenant1").setTargets(20).setActions(40));
     }
 
     private byte[] createTestTenantsForSystemStatistics(final int tenants, final int artifactSize, final int targets,

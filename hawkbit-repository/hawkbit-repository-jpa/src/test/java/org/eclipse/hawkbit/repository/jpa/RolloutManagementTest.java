@@ -188,12 +188,12 @@ public class RolloutManagementTest extends AbstractJpaIntegrationTest {
     @Description("Verifies that management queries react as specfied on calls for non existing entities "
             + " by means of throwing EntityNotFoundException.")
     @ExpectEvents({ @Expect(type = RolloutDeletedEvent.class, count = 0),
-            @Expect(type = RolloutGroupCreatedEvent.class, count = 10),
-            @Expect(type = RolloutGroupUpdatedEvent.class, count = 10),
+            @Expect(type = RolloutGroupCreatedEvent.class, count = 5),
+            @Expect(type = RolloutGroupUpdatedEvent.class, count = 5),
             @Expect(type = DistributionSetCreatedEvent.class, count = 1),
             @Expect(type = SoftwareModuleCreatedEvent.class, count = 3),
             @Expect(type = RolloutUpdatedEvent.class, count = 1), @Expect(type = RolloutCreatedEvent.class, count = 1),
-            @Expect(type = TargetCreatedEvent.class, count = 10) })
+            @Expect(type = TargetCreatedEvent.class, count = 5) })
     public void entityQueriesReferringToNotExistingEntitiesThrowsException() {
         testdataFactory.createRollout("xxx");
 
@@ -1472,10 +1472,10 @@ public class RolloutManagementTest extends AbstractJpaIntegrationTest {
     public void createRolloutWithGroupDefinition() throws Exception {
         final String rolloutName = "rolloutTest3";
 
-        final int amountTargetsInGroup1 = 100;
+        final int amountTargetsInGroup1 = 10;
         final int percentTargetsInGroup1 = 100;
 
-        final int amountTargetsInGroup1and2 = 500;
+        final int amountTargetsInGroup1and2 = 20;
         final int percentTargetsInGroup2 = 20;
         final int percentTargetsInGroup3 = 100;
 

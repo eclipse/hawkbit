@@ -944,12 +944,12 @@ public class DistributionSetManagementTest extends AbstractJpaIntegrationTest {
         final DistributionSet ds1 = testdataFactory.createDistributionSet("testDs1");
         final DistributionSet ds2 = testdataFactory.createDistributionSet("testDs2");
 
-        for (int index = 0; index < 10; index++) {
+        for (int index = 0; index < quotaManagement.getMaxMetaDataEntriesPerDistributionSet(); index++) {
             createDistributionSetMetadata(ds1.getId(),
                     new JpaDistributionSetMetadata("key" + index, ds1, "value" + index));
         }
 
-        for (int index = 0; index < 8; index++) {
+        for (int index = 0; index <= quotaManagement.getMaxMetaDataEntriesPerDistributionSet() - 2; index++) {
             createDistributionSetMetadata(ds2.getId(),
                     new JpaDistributionSetMetadata("key" + index, ds2, "value" + index));
         }
@@ -960,11 +960,11 @@ public class DistributionSetManagementTest extends AbstractJpaIntegrationTest {
         final Page<DistributionSetMetadata> metadataOfDs2 = distributionSetManagement
                 .findMetaDataByDistributionSetId(PageRequest.of(0, 100), ds2.getId());
 
-        assertThat(metadataOfDs1.getNumberOfElements()).isEqualTo(10);
-        assertThat(metadataOfDs1.getTotalElements()).isEqualTo(10);
+        assertThat(metadataOfDs1.getNumberOfElements()).isEqualTo(quotaManagement.getMaxMetaDataEntriesPerDistributionSet());
+        assertThat(metadataOfDs1.getTotalElements()).isEqualTo(quotaManagement.getMaxMetaDataEntriesPerDistributionSet());
 
-        assertThat(metadataOfDs2.getNumberOfElements()).isEqualTo(8);
-        assertThat(metadataOfDs2.getTotalElements()).isEqualTo(8);
+        assertThat(metadataOfDs2.getNumberOfElements()).isEqualTo(quotaManagement.getMaxMetaDataEntriesPerDistributionSet() - 1);
+        assertThat(metadataOfDs2.getTotalElements()).isEqualTo(quotaManagement.getMaxMetaDataEntriesPerDistributionSet() - 1);
     }
 
     @Test

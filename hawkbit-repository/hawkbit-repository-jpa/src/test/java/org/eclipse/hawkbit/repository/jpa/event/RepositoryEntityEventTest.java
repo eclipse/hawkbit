@@ -91,7 +91,7 @@ public class RepositoryEntityEventTest extends AbstractJpaIntegrationTest {
     @Test
     @Description("Verifies that the rollout deleted event is published when a rollout has been deleted")
     public void rolloutDeletedEventIsPublished() throws InterruptedException {
-        final int amountTargetsForRollout = 500;
+        final int amountTargetsForRollout = 50;
         final int amountGroups = 5;
         final String successCondition = "50";
         final String errorCondition = "80";

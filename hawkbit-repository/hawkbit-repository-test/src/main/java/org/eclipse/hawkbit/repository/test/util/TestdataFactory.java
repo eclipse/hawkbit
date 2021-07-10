@@ -32,6 +32,7 @@ import org.eclipse.hawkbit.repository.DistributionSetManagement;
 import org.eclipse.hawkbit.repository.DistributionSetTagManagement;
 import org.eclipse.hawkbit.repository.DistributionSetTypeManagement;
 import org.eclipse.hawkbit.repository.EntityFactory;
+import org.eclipse.hawkbit.repository.QuotaManagement;
 import org.eclipse.hawkbit.repository.RolloutManagement;
 import org.eclipse.hawkbit.repository.SoftwareModuleManagement;
 import org.eclipse.hawkbit.repository.SoftwareModuleTypeManagement;
@@ -158,6 +159,9 @@ public class TestdataFactory {
 
     @Autowired
     private RolloutManagement rolloutManagement;
+
+    @Autowired
+    private QuotaManagement quotaManagement;
 
     /**
      * Creates {@link DistributionSet} in repository including three
@@ -1138,8 +1142,8 @@ public class TestdataFactory {
      * @return created {@link Rollout}
      */
     public Rollout createRollout(final String prefix) {
-        createTargets(10, prefix);
-        return createRolloutByVariables(prefix, prefix + " description", 10, "controllerId==" + prefix + "*",
+        createTargets(quotaManagement.getMaxRolloutGroupsPerRollout(), prefix);
+        return createRolloutByVariables(prefix, prefix + " description", 5, "controllerId==" + prefix + "*",
                 createDistributionSet(prefix), "50", "5");
     }
 
