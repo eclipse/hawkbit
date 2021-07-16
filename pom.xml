@@ -171,7 +171,7 @@
       <javax.el-api.version>2.2.4</javax.el-api.version>
       <corn-cps.version>1.1.7</corn-cps.version>
       <jlorem.version>1.1</jlorem.version>
-      <commons-io.version>2.5</commons-io.version>
+      <commons-io.version>2.7</commons-io.version>
       <rsql-parser.version>2.1.0</rsql-parser.version>
       <awaitility.version>3.1.2</awaitility.version>
       <io-protostuff.version>1.5.6</io-protostuff.version>
