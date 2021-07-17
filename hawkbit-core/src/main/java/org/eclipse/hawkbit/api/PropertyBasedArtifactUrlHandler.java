@@ -56,6 +56,7 @@ public class PropertyBasedArtifactUrlHandler implements ArtifactUrlHandler {
     private static final String HOSTNAME_PLACEHOLDER = "hostname";
     private static final String HOSTNAME_REQUEST_PLACEHOLDER = "hostnameRequest";
     private static final String PORT_REQUEST_PLACEHOLDER = "portRequest";
+    private static final String CONTEXT_PATH_PLACEHOLDER = "contextPath";
     private static final String HOSTNAME_WITH_DOMAIN_REQUEST_PLACEHOLDER = "domainRequest";
     private static final String ARTIFACT_FILENAME_PLACEHOLDER = "artifactFileName";
     private static final String ARTIFACT_SHA1_PLACEHOLDER = "artifactSHA1";
@@ -100,11 +101,18 @@ public class PropertyBasedArtifactUrlHandler implements ArtifactUrlHandler {
         String urlPattern = protocol.getRef();
 
         for (final Entry<String, String> entry : entrySet) {
+            String value = System.getenv("HAWKBIT_" + entry.getKey().toUpperCase());
+            if (StringUtils.isEmpty(value))
+                value = entry.getValue();
             if (entry.getKey().equals(PORT_PLACEHOLDER)) {
                 urlPattern = urlPattern.replace(":{" + entry.getKey() + "}",
-                        StringUtils.isEmpty(entry.getValue()) ? "" : (":" + entry.getValue()));
+                        StringUtils.isEmpty(value) ? "" : (":" + value));
+            } else if (entry.getKey().equals(CONTEXT_PATH_PLACEHOLDER)) {
+                value = value.replaceFirst("^/", "").replaceFirst("/$", "");
+                urlPattern = urlPattern.replace("/{" + entry.getKey() + "}",
+                        StringUtils.isEmpty(value) ? "" : ("/" + value));
             } else {
-                urlPattern = urlPattern.replace("{" + entry.getKey() + "}", entry.getValue());
+                urlPattern = urlPattern.replace("{" + entry.getKey() + "}", value);
             }
         }
         return urlPattern;
@@ -119,6 +127,7 @@ public class PropertyBasedArtifactUrlHandler implements ArtifactUrlHandler {
         replaceMap.put(HOSTNAME_REQUEST_PLACEHOLDER, getRequestHost(protocol, requestUri));
         replaceMap.put(PORT_REQUEST_PLACEHOLDER, getRequestPort(protocol, requestUri));
         replaceMap.put(HOSTNAME_WITH_DOMAIN_REQUEST_PLACEHOLDER, computeHostWithRequestDomain(protocol, requestUri));
+        replaceMap.put(CONTEXT_PATH_PLACEHOLDER, protocol.getContextPath());
 
         try {
             replaceMap.put(ARTIFACT_FILENAME_PLACEHOLDER,
