@@ -26,6 +26,7 @@ import org.vaadin.spring.events.annotation.EventBusListenerMethod;
 public class PinningChangedListener<F> extends TopicEventListener {
     private final Class<? extends ProxyIdentifiableEntity> entityType;
     private final PinSupport<? extends ProxyIdentifiableEntity, F> pinSupport;
+    private final Runnable updatePinCountInfo;
 
     /**
      * Constructor for PinningChangedListener
@@ -39,10 +40,28 @@ public class PinningChangedListener<F> extends TopicEventListener {
      */
     public PinningChangedListener(final UIEventBus eventBus, final Class<? extends ProxyIdentifiableEntity> entityType,
             final PinSupport<? extends ProxyIdentifiableEntity, F> pinSupport) {
+        this(eventBus, entityType, pinSupport, null);
+    }
+
+    /**
+     * Constructor for PinningChangedListener
+     *
+     * @param eventBus
+     *            UIEventBus
+     * @param entityType
+     *            Identifiable Entity type
+     * @param pinSupport
+     *            Pin support
+     * @param updatePinCountInfo
+     *            Callback to update pinned entities count info on pin change
+     */
+    public PinningChangedListener(final UIEventBus eventBus, final Class<? extends ProxyIdentifiableEntity> entityType,
+            final PinSupport<? extends ProxyIdentifiableEntity, F> pinSupport, final Runnable updatePinCountInfo) {
         super(eventBus, EventTopics.PINNING_CHANGED);
 
         this.entityType = entityType;
         this.pinSupport = pinSupport;
+        this.updatePinCountInfo = updatePinCountInfo;
     }
 
     @EventBusListenerMethod(scope = EventScope.UI)
@@ -55,6 +74,10 @@ public class PinningChangedListener<F> extends TopicEventListener {
             pinSupport.updatePinFilter(eventPayload.getEntityId());
         } else {
             pinSupport.updatePinFilter(null);
+        }
+
+        if (updatePinCountInfo != null) {
+            updatePinCountInfo.run();
         }
     }
 

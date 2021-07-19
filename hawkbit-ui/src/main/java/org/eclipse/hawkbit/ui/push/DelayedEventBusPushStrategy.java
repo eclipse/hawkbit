@@ -45,7 +45,6 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.vaadin.spring.events.EventBus;
-import org.vaadin.spring.events.EventBus.SessionEventBus;
 import org.vaadin.spring.events.EventBus.UIEventBus;
 
 import com.nimbusds.oauth2.sdk.util.CollectionUtils;
@@ -286,7 +285,7 @@ public class DelayedEventBusPushStrategy
     /**
      * An application event publisher subscriber which subscribes
      * {@link EntityIdEvent} from the repository to dispatch these events to the
-     * UI {@link SessionEventBus} .
+     * UI {@link UIEventBus} .
      * 
      * @param applicationEvent
      *            the entity event which has been published from the repository

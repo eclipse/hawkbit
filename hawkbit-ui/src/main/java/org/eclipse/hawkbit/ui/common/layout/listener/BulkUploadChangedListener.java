@@ -12,7 +12,7 @@ import java.util.function.Consumer;
 
 import org.eclipse.hawkbit.ui.common.event.BulkUploadEventPayload;
 import org.eclipse.hawkbit.ui.common.event.EventTopics;
-import org.vaadin.spring.events.EventBus.UIEventBus;
+import org.vaadin.spring.events.EventBus;
 import org.vaadin.spring.events.EventScope;
 import org.vaadin.spring.events.annotation.EventBusListenerMethod;
 
@@ -32,7 +32,7 @@ public class BulkUploadChangedListener extends TopicEventListener {
      * @param bulkUploadCallback
      *            Bulk upload callback event
      */
-    public BulkUploadChangedListener(final UIEventBus eventBus,
+    public BulkUploadChangedListener(final EventBus eventBus,
             final Consumer<BulkUploadEventPayload> bulkUploadCallback) {
         super(eventBus, EventTopics.BULK_UPLOAD_CHANGED);
 

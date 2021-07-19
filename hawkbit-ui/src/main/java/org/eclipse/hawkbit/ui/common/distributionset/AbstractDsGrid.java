@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import org.eclipse.hawkbit.repository.DistributionSetManagement;
 import org.eclipse.hawkbit.ui.common.CommonUiDependencies;
 import org.eclipse.hawkbit.ui.common.builder.GridComponentBuilder;
+import org.eclipse.hawkbit.ui.common.data.filters.DsFilterParams;
 import org.eclipse.hawkbit.ui.common.data.mappers.DistributionSetToProxyDistributionMapper;
 import org.eclipse.hawkbit.ui.common.data.proxies.ProxyDistributionSet;
 import org.eclipse.hawkbit.ui.common.data.proxies.ProxyIdentifiableEntity;
@@ -36,9 +37,9 @@ import com.vaadin.ui.Button;
  * Abstract class of distribution set grid
  *
  * @param <F>
- *            Generic type
+ *            Generic filter type
  */
-public abstract class AbstractDsGrid<F> extends AbstractGrid<ProxyDistributionSet, F> {
+public abstract class AbstractDsGrid<F extends DsFilterParams> extends AbstractGrid<ProxyDistributionSet, F> {
     private static final long serialVersionUID = 1L;
 
     protected static final String DS_NAME_ID = "dsName";

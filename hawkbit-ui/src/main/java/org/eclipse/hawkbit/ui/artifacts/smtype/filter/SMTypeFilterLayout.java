@@ -65,12 +65,13 @@ public class SMTypeFilterLayout extends AbstractFilterLayout {
         this.smTypeFilterButtons = new SMTypeFilterButtons(uiDependencies, softwareModuleTypeManagement,
                 smTypeWindowBuilder, smTypeFilterLayoutUiState, eventView);
 
+        final EventLayoutViewAware layoutViewAware = new EventLayoutViewAware(EventLayout.SM_TYPE_FILTER, eventView);
         this.gridActionsVisibilityListener = new GridActionsVisibilityListener(uiDependencies.getEventBus(),
-                new EventLayoutViewAware(EventLayout.SM_TYPE_FILTER, eventView), smTypeFilterButtons::hideActionColumns,
-                smTypeFilterButtons::showEditColumn, smTypeFilterButtons::showDeleteColumn);
+                layoutViewAware, smTypeFilterButtons::hideActionColumns, smTypeFilterButtons::showEditColumn,
+                smTypeFilterButtons::showDeleteColumn);
         this.entityModifiedListener = new EntityModifiedListener.Builder<>(uiDependencies.getEventBus(),
-                ProxyType.class).entityModifiedAwareSupports(getEntityModifiedAwareSupports())
-                        .parentEntityType(ProxySoftwareModule.class).build();
+                ProxyType.class).parentEntityType(ProxySoftwareModule.class).viewAware(layoutViewAware)
+                        .entityModifiedAwareSupports(getEntityModifiedAwareSupports()).build();
 
         buildLayout();
     }
@@ -94,17 +95,24 @@ public class SMTypeFilterLayout extends AbstractFilterLayout {
         return wrapFilterContent(smTypeFilterButtons);
     }
 
-    /**
-     * Is called when view is shown to the user
-     */
+    @Override
     public void restoreState() {
         smTypeFilterButtons.restoreState();
     }
 
-    /**
-     * Unsubscribe the events listeners
-     */
-    public void unsubscribeListener() {
+    @Override
+    public void onViewEnter() {
+        smTypeFilterButtons.reevaluateFilter();
+    }
+
+    @Override
+    public void subscribeListeners() {
+        gridActionsVisibilityListener.subscribe();
+        entityModifiedListener.subscribe();
+    }
+
+    @Override
+    public void unsubscribeListeners() {
         gridActionsVisibilityListener.unsubscribe();
         entityModifiedListener.unsubscribe();
     }

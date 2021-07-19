@@ -8,11 +8,9 @@
  */
 package org.eclipse.hawkbit.ui.rollout;
 
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Map;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 
 import org.eclipse.hawkbit.repository.DistributionSetManagement;
 import org.eclipse.hawkbit.repository.EntityFactory;
@@ -26,6 +24,7 @@ import org.eclipse.hawkbit.security.SystemSecurityContext;
 import org.eclipse.hawkbit.ui.AbstractHawkbitUI;
 import org.eclipse.hawkbit.ui.SpPermissionChecker;
 import org.eclipse.hawkbit.ui.UiProperties;
+import org.eclipse.hawkbit.ui.common.AbstractEventListenersAwareView;
 import org.eclipse.hawkbit.ui.common.CommonUiDependencies;
 import org.eclipse.hawkbit.ui.common.event.EventLayout;
 import org.eclipse.hawkbit.ui.common.event.EventView;
@@ -40,18 +39,16 @@ import org.eclipse.hawkbit.ui.utils.VaadinMessageSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.vaadin.spring.events.EventBus.UIEventBus;
 
-import com.vaadin.navigator.View;
 import com.vaadin.spring.annotation.SpringView;
 import com.vaadin.spring.annotation.UIScope;
 import com.vaadin.ui.Alignment;
-import com.vaadin.ui.VerticalLayout;
 
 /**
  * Rollout management view.
  */
 @UIScope
 @SpringView(name = RolloutView.VIEW_NAME, ui = AbstractHawkbitUI.class)
-public class RolloutView extends VerticalLayout implements View {
+public class RolloutView extends AbstractEventListenersAwareView {
     private static final long serialVersionUID = 1L;
 
     public static final String VIEW_NAME = "rollout";
@@ -74,8 +71,8 @@ public class RolloutView extends VerticalLayout implements View {
             final SystemSecurityContext systemSecurityContext) {
         this.rolloutManagementUIState = rolloutManagementUIState;
 
-        final CommonUiDependencies uiDependencies = new CommonUiDependencies(i18n, entityFactory, eventBus, uiNotification,
-                permissionChecker);
+        final CommonUiDependencies uiDependencies = new CommonUiDependencies(i18n, entityFactory, eventBus,
+                uiNotification, permissionChecker);
 
         this.rolloutsLayout = new RolloutGridLayout(uiDependencies, rolloutManagementUIState, rolloutManagement,
                 targetManagement, uiProperties, targetFilterQueryManagement, rolloutGroupManagement, quotaManagement,
@@ -84,6 +81,8 @@ public class RolloutView extends VerticalLayout implements View {
                 rolloutManagementUIState);
         this.rolloutGroupTargetsLayout = new RolloutGroupTargetGridLayout(uiDependencies, rolloutGroupManagement,
                 rolloutManagementUIState);
+
+        addEventAwareLayouts(Arrays.asList(rolloutsLayout, rolloutGroupsLayout, rolloutGroupTargetsLayout));
 
         final Map<EventLayout, VisibilityHandler> layoutVisibilityHandlers = new EnumMap<>(EventLayout.class);
         layoutVisibilityHandlers.put(EventLayout.ROLLOUT_LIST,
@@ -96,13 +95,8 @@ public class RolloutView extends VerticalLayout implements View {
                 layoutVisibilityHandlers);
     }
 
-    @PostConstruct
-    void init() {
-        buildLayout();
-        restoreState();
-    }
-
-    private void buildLayout() {
+    @Override
+    protected void buildLayout() {
         setSpacing(false);
         setMargin(false);
         setSizeFull();
@@ -152,7 +146,8 @@ public class RolloutView extends VerticalLayout implements View {
         rolloutGroupTargetsLayout.setVisible(true);
     }
 
-    private void restoreState() {
+    @Override
+    protected void restoreState() {
         final EventLayout layout = rolloutManagementUIState.getCurrentLayout().orElse(EventLayout.ROLLOUT_LIST);
         switch (layout) {
         case ROLLOUT_LIST:
@@ -168,17 +163,25 @@ public class RolloutView extends VerticalLayout implements View {
             break;
         }
 
-        rolloutsLayout.restoreState();
-        rolloutGroupsLayout.restoreState();
-        rolloutGroupTargetsLayout.restoreState();
+        super.restoreState();
     }
 
-    @PreDestroy
-    void destroy() {
+    @Override
+    public String getViewName() {
+        return RolloutView.VIEW_NAME;
+    }
+
+    @Override
+    protected void subscribeListeners() {
+        layoutVisibilityListener.subscribe();
+
+        super.subscribeListeners();
+    }
+
+    @Override
+    protected void unsubscribeListeners() {
         layoutVisibilityListener.unsubscribe();
 
-        rolloutsLayout.unsubscribeListener();
-        rolloutGroupsLayout.unsubscribeListener();
-        rolloutGroupTargetsLayout.unsubscribeListener();
+        super.unsubscribeListeners();
     }
 }

@@ -45,9 +45,10 @@ public abstract class AbstractTypeFilterButtons extends AbstractFilterButtons<Pr
      * @param typeFilterLayoutUiState
      *            TypeFilterLayoutUiState
      */
-    public AbstractTypeFilterButtons(final CommonUiDependencies uiDependencies,
+    protected AbstractTypeFilterButtons(final CommonUiDependencies uiDependencies,
             final TypeFilterLayoutUiState typeFilterLayoutUiState) {
-        super(uiDependencies.getEventBus(), uiDependencies.getI18n(), uiDependencies.getUiNotification(), uiDependencies.getPermChecker());
+        super(uiDependencies.getEventBus(), uiDependencies.getI18n(), uiDependencies.getUiNotification(),
+                uiDependencies.getPermChecker());
 
         this.uiNotification = uiDependencies.getUiNotification();
         this.typeFilterLayoutUiState = typeFilterLayoutUiState;
@@ -74,8 +75,18 @@ public abstract class AbstractTypeFilterButtons extends AbstractFilterButtons<Pr
         typeFilterLayoutUiState.setClickedTypeId(typeId);
     }
 
+    /**
+     * Provides type of the master entity.
+     * 
+     * @return type of the master entity
+     */
     protected abstract Class<? extends ProxyIdentifiableEntity> getFilterMasterEntityType();
 
+    /**
+     * Provides event view filter.
+     * 
+     * @return event view filter.
+     */
     protected abstract EventView getView();
 
     @Override
@@ -106,8 +117,21 @@ public abstract class AbstractTypeFilterButtons extends AbstractFilterButtons<Pr
         }
     }
 
-    protected abstract boolean isDefaultType(final ProxyType typeToDelete);
+    /**
+     * Checks if provided type is the default one.
+     * 
+     * @param type
+     *            provided type
+     * @return default type check
+     */
+    protected abstract boolean isDefaultType(final ProxyType type);
 
+    /**
+     * Type deletion operation.
+     * 
+     * @param typeToDelete
+     *            type to delete
+     */
     protected abstract void deleteType(final ProxyType typeToDelete);
 
     /**
@@ -144,6 +168,13 @@ public abstract class AbstractTypeFilterButtons extends AbstractFilterButtons<Pr
         updateWindow.setVisible(Boolean.TRUE);
     }
 
+    /**
+     * Provides the window for updating type
+     *
+     * @param clickedFilter
+     *            type to update
+     * @return update window
+     */
     protected abstract Window getUpdateWindow(final ProxyType clickedFilter);
 
     @Override
@@ -152,6 +183,28 @@ public abstract class AbstractTypeFilterButtons extends AbstractFilterButtons<Pr
 
         if (lastClickedTypeId != null) {
             getFilterButtonClickBehaviour().setPreviouslyClickedFilterId(lastClickedTypeId);
+        }
+    }
+
+    /**
+     * Check if provided type exists by id.
+     *
+     * @param typeId
+     *            provided type id
+     * @return if type exists
+     */
+    protected abstract boolean typeExists(final Long typeId);
+
+    /**
+     * Re-evaluates a filter (usually after view enter).
+     *
+     */
+    public void reevaluateFilter() {
+        final Long clickedTypeId = getFilterButtonClickBehaviour().getPreviouslyClickedFilterId();
+
+        if (clickedTypeId != null && !typeExists(clickedTypeId)) {
+            getFilterButtonClickBehaviour().setPreviouslyClickedFilterId(null);
+            publishFilterChangedEvent(null);
         }
     }
 }

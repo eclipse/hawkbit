@@ -22,7 +22,6 @@ import org.eclipse.hawkbit.ui.common.event.EventLayout;
 import org.eclipse.hawkbit.ui.common.event.EventLayoutViewAware;
 import org.eclipse.hawkbit.ui.common.event.EventTopics;
 import org.eclipse.hawkbit.ui.common.event.EventView;
-import org.eclipse.hawkbit.ui.common.event.EventViewAware;
 import org.eclipse.hawkbit.ui.common.layout.MasterEntityAwareComponent;
 import org.eclipse.hawkbit.ui.common.layout.listener.EntityModifiedListener;
 import org.eclipse.hawkbit.ui.common.layout.listener.EntityModifiedListener.EntityModifiedAwareSupport;
@@ -81,15 +80,15 @@ public class SoftwareModuleGridLayout extends AbstractSoftwareModuleGridLayout {
                 softwareModuleTypeManagement, getSmMetaDataWindowBuilder());
         this.softwareModuleDetails.buildDetails();
 
+        final EventLayoutViewAware layoutViewAware = new EventLayoutViewAware(EventLayout.SM_LIST, getEventView());
         addEventListener(new FilterChangedListener<>(uiDependencies.getEventBus(), ProxySoftwareModule.class,
-                new EventViewAware(getEventView()), softwareModuleGrid.getFilterSupport()));
-        addEventListener(new SelectionChangedListener<>(uiDependencies.getEventBus(),
-                new EventLayoutViewAware(EventLayout.SM_LIST, getEventView()), getMasterSmAwareComponents()));
-        addEventListener(new SelectGridEntityListener<>(uiDependencies.getEventBus(),
-                new EventLayoutViewAware(EventLayout.SM_LIST, getEventView()),
+                layoutViewAware, softwareModuleGrid.getFilterSupport()));
+        addEventListener(new SelectionChangedListener<>(uiDependencies.getEventBus(), layoutViewAware,
+                getMasterSmAwareComponents()));
+        addEventListener(new SelectGridEntityListener<>(uiDependencies.getEventBus(), layoutViewAware,
                 softwareModuleGrid.getSelectionSupport()));
         addEventListener(new EntityModifiedListener.Builder<>(uiDependencies.getEventBus(), ProxySoftwareModule.class)
-                .entityModifiedAwareSupports(getSmModifiedAwareSupports()).build());
+                .viewAware(layoutViewAware).entityModifiedAwareSupports(getSmModifiedAwareSupports()).build());
         addEventListener(new GenericEventListener<>(uiDependencies.getEventBus(), EventTopics.FILE_UPLOAD_CHANGED,
                 this::onUploadChanged));
 

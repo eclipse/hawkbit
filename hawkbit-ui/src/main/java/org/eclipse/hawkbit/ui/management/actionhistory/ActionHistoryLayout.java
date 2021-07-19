@@ -10,13 +10,14 @@ package org.eclipse.hawkbit.ui.management.actionhistory;
 
 import org.eclipse.hawkbit.repository.DeploymentManagement;
 import org.eclipse.hawkbit.ui.common.CommonUiDependencies;
+import org.eclipse.hawkbit.ui.common.EventListenersAwareLayout;
 
 import com.vaadin.ui.HorizontalLayout;
 
 /**
  * Layout responsible for action-history-grid and the corresponding header.
  */
-public class ActionHistoryLayout extends HorizontalLayout {
+public class ActionHistoryLayout extends HorizontalLayout implements EventListenersAwareLayout {
     private static final long serialVersionUID = 1L;
 
     private final ActionHistoryGridLayout actionHistoryGridLayout;
@@ -33,7 +34,8 @@ public class ActionHistoryLayout extends HorizontalLayout {
      * @param actionHistoryGridLayoutUiState
      *            ActionHistoryGridLayoutUiState
      */
-    public ActionHistoryLayout(final CommonUiDependencies uiDependencies, final DeploymentManagement deploymentManagement,
+    public ActionHistoryLayout(final CommonUiDependencies uiDependencies,
+            final DeploymentManagement deploymentManagement,
             final ActionHistoryGridLayoutUiState actionHistoryGridLayoutUiState) {
 
         this.actionHistoryGridLayout = new ActionHistoryGridLayout(uiDependencies, deploymentManagement,
@@ -66,13 +68,6 @@ public class ActionHistoryLayout extends HorizontalLayout {
     }
 
     /**
-     * Restore the action history grid layout
-     */
-    public void restoreState() {
-        actionHistoryGridLayout.restoreState();
-    }
-
-    /**
      * Maximize the action history grid layout
      */
     public void maximize() {
@@ -98,12 +93,27 @@ public class ActionHistoryLayout extends HorizontalLayout {
         actionStatusMsgLayout.setVisible(false);
     }
 
-    /**
-     * Unsubscribe the changed listener
-     */
-    public void unsubscribeListener() {
-        actionHistoryGridLayout.unsubscribeListener();
-        actionStatusLayout.unsubscribeListener();
-        actionStatusMsgLayout.unsubscribeListener();
+    @Override
+    public void restoreState() {
+        actionHistoryGridLayout.restoreState();
+    }
+
+    @Override
+    public void onViewEnter() {
+        actionHistoryGridLayout.onViewEnter();
+    }
+
+    @Override
+    public void subscribeListeners() {
+        actionHistoryGridLayout.subscribeListeners();
+        actionStatusLayout.subscribeListeners();
+        actionStatusMsgLayout.subscribeListeners();
+    }
+
+    @Override
+    public void unsubscribeListeners() {
+        actionHistoryGridLayout.unsubscribeListeners();
+        actionStatusLayout.unsubscribeListeners();
+        actionStatusMsgLayout.unsubscribeListeners();
     }
 }

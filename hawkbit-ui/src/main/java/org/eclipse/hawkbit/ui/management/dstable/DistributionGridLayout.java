@@ -33,7 +33,6 @@ import org.eclipse.hawkbit.ui.common.distributionset.DistributionSetGridHeader;
 import org.eclipse.hawkbit.ui.common.event.EventLayout;
 import org.eclipse.hawkbit.ui.common.event.EventLayoutViewAware;
 import org.eclipse.hawkbit.ui.common.event.EventView;
-import org.eclipse.hawkbit.ui.common.event.EventViewAware;
 import org.eclipse.hawkbit.ui.common.layout.MasterEntityAwareComponent;
 import org.eclipse.hawkbit.ui.common.layout.listener.EntityModifiedListener;
 import org.eclipse.hawkbit.ui.common.layout.listener.EntityModifiedListener.EntityModifiedAwareSupport;
@@ -119,17 +118,18 @@ public class DistributionGridLayout extends AbstractDistributionSetGridLayout {
         this.distributionDetails.setUnassignSmAllowed(false);
         this.distributionDetails.buildDetails();
 
+        final EventLayoutViewAware layoutViewAware = new EventLayoutViewAware(EventLayout.DS_LIST, getEventView());
         addEventListener(new FilterChangedListener<>(uiDependencies.getEventBus(), ProxyDistributionSet.class,
-                new EventViewAware(getEventView()), distributionGrid.getFilterSupport()));
+                layoutViewAware, distributionGrid.getFilterSupport()));
         addEventListener(new PinningChangedListener<>(uiDependencies.getEventBus(), ProxyTarget.class,
                 distributionGrid.getPinSupport()));
-        addEventListener(new SelectionChangedListener<>(uiDependencies.getEventBus(),
-                new EventLayoutViewAware(EventLayout.DS_LIST, getEventView()), getMasterDsAwareComponents()));
+        addEventListener(new SelectionChangedListener<>(uiDependencies.getEventBus(), layoutViewAware,
+                getMasterDsAwareComponents()));
         addEventListener(new EntityModifiedListener.Builder<>(uiDependencies.getEventBus(), ProxyDistributionSet.class)
-                .entityModifiedAwareSupports(getDsModifiedAwareSupports()).build());
+                .viewAware(layoutViewAware).entityModifiedAwareSupports(getDsModifiedAwareSupports()).build());
         addEventListener(new EntityModifiedListener.Builder<>(uiDependencies.getEventBus(), ProxyTag.class)
-                .entityModifiedAwareSupports(getTagModifiedAwareSupports()).parentEntityType(ProxyDistributionSet.class)
-                .build());
+                .parentEntityType(ProxyDistributionSet.class).viewAware(layoutViewAware)
+                .entityModifiedAwareSupports(getTagModifiedAwareSupports()).build());
 
         buildLayout(distributionGridHeader, distributionGrid, distributionSetDetailsHeader, distributionDetails);
     }

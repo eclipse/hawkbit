@@ -244,7 +244,7 @@ public class RolloutGrid extends AbstractGrid<ProxyRollout, String> {
     }
 
     private void updateGridItem(final Rollout rollout) {
-        final ProxyRollout proxyRollout = RolloutToProxyRolloutMapper.mapRollout(rollout);
+        final ProxyRollout proxyRollout = rolloutMapper.map(rollout);
 
         if (rollout.getRolloutGroupsCreated() == 0) {
             final Long groupsCount = rolloutGroupManagement.countByRollout(rollout.getId());
@@ -359,6 +359,10 @@ public class RolloutGrid extends AbstractGrid<ProxyRollout, String> {
         getSelectionSupport().sendSelectionChangedEvent(SelectionChangedEventType.ENTITY_SELECTED, rollout);
         rolloutManagementUIState.setSelectedRolloutName(rollout.getName());
 
+        showRolloutGroupListLayout();
+    }
+
+    private void showRolloutGroupListLayout() {
         eventBus.publish(CommandTopics.CHANGE_LAYOUT_VISIBILITY, this, new LayoutVisibilityEventPayload(
                 VisibilityType.SHOW, EventLayout.ROLLOUT_GROUP_LIST, EventView.ROLLOUT));
     }
@@ -428,14 +432,36 @@ public class RolloutGrid extends AbstractGrid<ProxyRollout, String> {
         uiNotification.displayWarning(
                 i18n.getMessage("rollout.not.exists", rolloutManagementUIState.getSelectedRolloutName()));
 
-        showRolloutListLayout();
+        final EventLayout currentLayout = rolloutManagementUIState.getCurrentLayout().orElse(null);
+        if (currentLayout == null || currentLayout != EventLayout.ROLLOUT_LIST) {
+            showRolloutListLayout();
+        }
     }
 
     private void showRolloutListLayout() {
-        if (rolloutManagementUIState.getCurrentLayout().map(currentLayout -> currentLayout != EventLayout.ROLLOUT_LIST)
-                .orElse(true)) {
-            eventBus.publish(CommandTopics.CHANGE_LAYOUT_VISIBILITY, this,
-                    new LayoutVisibilityEventPayload(VisibilityType.SHOW, EventLayout.ROLLOUT_LIST, EventView.ROLLOUT));
+        eventBus.publish(CommandTopics.CHANGE_LAYOUT_VISIBILITY, this,
+                new LayoutVisibilityEventPayload(VisibilityType.SHOW, EventLayout.ROLLOUT_LIST, EventView.ROLLOUT));
+    }
+
+    /**
+     * Re-fetches and re-selects currently selected rollout in order to update
+     * details layouts.
+     *
+     */
+    public void reselectCurrentRollout() {
+        final Long selectedRolloutId = rolloutManagementUIState.getSelectedRolloutId();
+        if (selectedRolloutId == null) {
+            return;
+        }
+
+        final Optional<ProxyRollout> refetchedRollout = mapIdToProxyEntity(selectedRolloutId);
+        refetchedRollout.ifPresent(rollout -> {
+            getSelectionSupport().sendSelectionChangedEvent(SelectionChangedEventType.ENTITY_SELECTED, rollout);
+            rolloutManagementUIState.setSelectedRolloutName(rollout.getName());
+        });
+
+        if (!refetchedRollout.isPresent()) {
+            onSelectedRolloutDeleted(selectedRolloutId);
         }
     }
 }

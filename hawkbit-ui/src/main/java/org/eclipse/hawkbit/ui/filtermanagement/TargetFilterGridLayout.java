@@ -64,12 +64,12 @@ public class TargetFilterGridLayout extends AbstractGridComponentLayout {
         this.targetFilterGrid = new TargetFilterGrid(uiDependencies, filterManagementUIState.getGridLayoutUiState(),
                 targetFilterQueryManagement, autoAssignmentWindowBuilder);
 
+        final EventViewAware viewAware = new EventViewAware(EventView.TARGET_FILTER);
         this.targetQueryFilterListener = new FilterChangedListener<>(uiDependencies.getEventBus(),
-                ProxyTargetFilterQuery.class, new EventViewAware(EventView.TARGET_FILTER),
-                targetFilterGrid.getFilterSupport());
+                ProxyTargetFilterQuery.class, viewAware, targetFilterGrid.getFilterSupport());
         this.filterQueryModifiedListener = new EntityModifiedListener.Builder<>(uiDependencies.getEventBus(),
-                ProxyTargetFilterQuery.class).entityModifiedAwareSupports(getFilterQueryModifiedAwareSupports())
-                        .build();
+                ProxyTargetFilterQuery.class).viewAware(viewAware)
+                        .entityModifiedAwareSupports(getFilterQueryModifiedAwareSupports()).build();
 
         buildLayout(targetFilterGridHeader, targetFilterGrid);
     }
@@ -78,18 +78,20 @@ public class TargetFilterGridLayout extends AbstractGridComponentLayout {
         return Collections.singletonList(EntityModifiedGridRefreshAwareSupport.of(targetFilterGrid::refreshAll));
     }
 
-    /**
-     * restore the saved state
-     */
+    @Override
     public void restoreState() {
         targetFilterGridHeader.restoreState();
         targetFilterGrid.restoreState();
     }
 
-    /**
-     * unsubscribe all listener
-     */
-    public void unsubscribeListener() {
+    @Override
+    public void subscribeListeners() {
+        targetQueryFilterListener.subscribe();
+        filterQueryModifiedListener.subscribe();
+    }
+
+    @Override
+    public void unsubscribeListeners() {
         targetQueryFilterListener.unsubscribe();
         filterQueryModifiedListener.unsubscribe();
     }

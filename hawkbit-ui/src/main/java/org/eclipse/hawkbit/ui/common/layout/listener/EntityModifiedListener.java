@@ -14,15 +14,18 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import org.eclipse.hawkbit.ui.common.ViewNameAware;
 import org.eclipse.hawkbit.ui.common.data.proxies.ProxyIdentifiableEntity;
 import org.eclipse.hawkbit.ui.common.event.EntityModifiedEventPayload;
 import org.eclipse.hawkbit.ui.common.event.EntityModifiedEventPayload.EntityModifiedEventType;
 import org.eclipse.hawkbit.ui.common.event.EventTopics;
+import org.eclipse.hawkbit.ui.common.event.EventViewAware;
 import org.springframework.util.CollectionUtils;
 import org.vaadin.spring.events.EventBus.UIEventBus;
 import org.vaadin.spring.events.EventScope;
 import org.vaadin.spring.events.annotation.EventBusListenerMethod;
 
+import com.vaadin.navigator.View;
 import com.vaadin.ui.UI;
 
 /**
@@ -31,7 +34,7 @@ import com.vaadin.ui.UI;
  * @param <T>
  *            Generic typ of ProxyIdentifiableEntity
  */
-public class EntityModifiedListener<T extends ProxyIdentifiableEntity> extends TopicEventListener {
+public final class EntityModifiedListener<T extends ProxyIdentifiableEntity> extends ViewAwareListener {
     private final Class<T> entityType;
     private final Class<? extends ProxyIdentifiableEntity> parentEntityType;
     private final Supplier<Optional<Long>> parentEntityIdProvider;
@@ -48,14 +51,16 @@ public class EntityModifiedListener<T extends ProxyIdentifiableEntity> extends T
      *            Identifiable entity
      * @param parentEntityIdProvider
      *            Parent entity id provider
+     * @param viewAware
+     *            View aware
      * @param entityModifiedAwareSupports
      *            List of entity modified aware support
      */
-    public EntityModifiedListener(final UIEventBus eventBus, final Class<T> entityType,
+    private EntityModifiedListener(final UIEventBus eventBus, final Class<T> entityType,
             final Class<? extends ProxyIdentifiableEntity> parentEntityType,
-            final Supplier<Optional<Long>> parentEntityIdProvider,
+            final Supplier<Optional<Long>> parentEntityIdProvider, final EventViewAware viewAware,
             final List<EntityModifiedAwareSupport> entityModifiedAwareSupports) {
-        super(eventBus, EventTopics.ENTITY_MODIFIED);
+        super(eventBus, EventTopics.ENTITY_MODIFIED, viewAware);
 
         this.entityType = entityType;
         this.parentEntityType = parentEntityType;
@@ -65,7 +70,7 @@ public class EntityModifiedListener<T extends ProxyIdentifiableEntity> extends T
 
     @EventBusListenerMethod(scope = EventScope.UI)
     private void onEntityModifiedEvent(final EntityModifiedEventPayload eventPayload) {
-        if (!suitableEntityType(eventPayload.getEntityType())
+        if (!suitableView() || !suitableEntityType(eventPayload.getEntityType())
                 || !suitableParentEntity(eventPayload.getParentType(), eventPayload.getParentId())) {
             return;
         }
@@ -88,6 +93,24 @@ public class EntityModifiedListener<T extends ProxyIdentifiableEntity> extends T
             handleEntitiesModified(support -> support.onEntitiesDeleted(entityIds));
             break;
         }
+    }
+
+    private boolean suitableView() {
+        // if view is not explicitly defined allow events from all views
+        if (getView() == null) {
+            return true;
+        }
+
+        return getView().matchByViewName(getCurrentViewName());
+    }
+
+    private String getCurrentViewName() {
+        final View currentView = UI.getCurrent().getNavigator().getCurrentView();
+        if (currentView instanceof ViewNameAware) {
+            return ((ViewNameAware) currentView).getViewName();
+        }
+
+        return "";
     }
 
     private boolean suitableEntityType(final Class<? extends ProxyIdentifiableEntity> type) {
@@ -161,6 +184,7 @@ public class EntityModifiedListener<T extends ProxyIdentifiableEntity> extends T
         private final Class<T> entityType;
         private Class<? extends ProxyIdentifiableEntity> parentEntityType;
         private Supplier<Optional<Long>> parentEntityIdProvider;
+        private EventViewAware viewAware;
         private List<EntityModifiedAwareSupport> entityModifiedAwareSupports;
 
         /**
@@ -203,6 +227,18 @@ public class EntityModifiedListener<T extends ProxyIdentifiableEntity> extends T
         }
 
         /**
+         * Set View aware
+         *
+         * @param viewAware
+         *            View aware
+         * @return builder
+         */
+        public Builder<T> viewAware(final EventViewAware viewAware) {
+            this.viewAware = viewAware;
+            return this;
+        }
+
+        /**
          * Build entity modified support for layout
          *
          * @param entityModifiedAwareSupports
@@ -220,7 +256,7 @@ public class EntityModifiedListener<T extends ProxyIdentifiableEntity> extends T
          */
         public EntityModifiedListener<T> build() {
             return new EntityModifiedListener<>(eventBus, entityType, parentEntityType, parentEntityIdProvider,
-                    entityModifiedAwareSupports);
+                    viewAware, entityModifiedAwareSupports);
         }
     }
 }

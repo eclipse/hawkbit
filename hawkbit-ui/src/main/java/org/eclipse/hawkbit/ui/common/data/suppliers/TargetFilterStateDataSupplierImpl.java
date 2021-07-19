@@ -8,6 +8,8 @@
  */
 package org.eclipse.hawkbit.ui.common.data.suppliers;
 
+import java.io.Serializable;
+
 import org.eclipse.hawkbit.repository.TargetManagement;
 import org.eclipse.hawkbit.ui.common.data.mappers.TargetToProxyTargetMapper;
 import org.eclipse.hawkbit.ui.common.data.providers.TargetFilterStateDataProvider;
@@ -21,7 +23,9 @@ import com.vaadin.data.provider.DataProvider;
  * implementation.
  *
  */
-public class TargetFilterStateDataSupplierImpl implements TargetFilterStateDataSupplier {
+public class TargetFilterStateDataSupplierImpl implements TargetFilterStateDataSupplier, Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final TargetFilterStateDataProvider dataProvider;
     private final DataCommunicator<ProxyTarget> dataCommunicator;
 

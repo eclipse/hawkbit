@@ -44,6 +44,7 @@ public class TargetFilterQueryButtons extends AbstractGrid<ProxyTargetFilterQuer
 
     private static final String FILTER_BUTTON_COLUMN_ID = "filterButton";
 
+    private final transient TargetFilterQueryManagement targetFilterQueryManagement;
     private final TargetTagFilterLayoutUiState targetTagFilterLayoutUiState;
 
     private final CustomTargetTagFilterButtonClick customTargetTagFilterButtonClick;
@@ -53,6 +54,7 @@ public class TargetFilterQueryButtons extends AbstractGrid<ProxyTargetFilterQuer
             final TargetTagFilterLayoutUiState targetTagFilterLayoutUiState) {
         super(i18n, eventBus);
 
+        this.targetFilterQueryManagement = targetFilterQueryManagement;
         this.targetTagFilterLayoutUiState = targetTagFilterLayoutUiState;
 
         this.customTargetTagFilterButtonClick = new CustomTargetTagFilterButtonClick(this::onFilterChangedEvent);
@@ -141,7 +143,7 @@ public class TargetFilterQueryButtons extends AbstractGrid<ProxyTargetFilterQuer
      * Reselect filter when target filter query updated
      *
      * @param updatedTargetFilterQueryIds
-     *          List of update query id
+     *            List of update query id
      */
     public void reselectFilterOnTfqUpdated(final Collection<Long> updatedTargetFilterQueryIds) {
         if (isClickedTfqInIds(updatedTargetFilterQueryIds)) {
@@ -159,7 +161,7 @@ public class TargetFilterQueryButtons extends AbstractGrid<ProxyTargetFilterQuer
      * Reselect filter when target filter query deleted
      *
      * @param deletedTargetFilterQueryIds
-     *          List of deleted query id
+     *            List of deleted query id
      */
     public void resetFilterOnTfqDeleted(final Collection<Long> deletedTargetFilterQueryIds) {
         if (isClickedTfqInIds(deletedTargetFilterQueryIds)) {
@@ -173,8 +175,29 @@ public class TargetFilterQueryButtons extends AbstractGrid<ProxyTargetFilterQuer
         final Long targetFilterQueryIdToRestore = targetTagFilterLayoutUiState.getClickedTargetFilterQueryId();
 
         if (targetFilterQueryIdToRestore != null) {
-            customTargetTagFilterButtonClick
-                    .setPreviouslyClickedFilterId(targetTagFilterLayoutUiState.getClickedTargetFilterQueryId());
+            if (targetFilterQueryExists(targetFilterQueryIdToRestore)) {
+                customTargetTagFilterButtonClick
+                        .setPreviouslyClickedFilterId(targetTagFilterLayoutUiState.getClickedTargetFilterQueryId());
+            } else {
+                targetTagFilterLayoutUiState.setClickedTargetFilterQueryId(null);
+            }
+        }
+    }
+
+    private boolean targetFilterQueryExists(final Long targetFilterQueryId) {
+        return targetFilterQueryManagement.get(targetFilterQueryId).isPresent();
+    }
+
+    /**
+     * Re-evaluates a filter (usually after view enter).
+     *
+     */
+    public void reevaluateFilter() {
+        final Long clickedTargetFilterQueryId = customTargetTagFilterButtonClick.getPreviouslyClickedFilterId();
+
+        if (clickedTargetFilterQueryId != null && !targetFilterQueryExists(clickedTargetFilterQueryId)) {
+            customTargetTagFilterButtonClick.setPreviouslyClickedFilterId(null);
+            publishFilterChangedEvent(null);
         }
     }
 }

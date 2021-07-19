@@ -66,13 +66,15 @@ public class TargetFilterDetailsLayout extends AbstractGridComponentLayout {
 
         initGridDataUpdatedListener();
 
+        final EventViewAware viewAware = new EventViewAware(EventView.TARGET_FILTER);
+        final EventLayoutViewAware layoutViewAware = new EventLayoutViewAware(EventLayout.TARGET_FILTER_QUERY_FORM,
+                EventView.TARGET_FILTER);
+
         this.showFilterQueryFormListener = new ShowEntityFormLayoutListener<>(uiDependencies.getEventBus(),
-                ProxyTargetFilterQuery.class,
-                new EventLayoutViewAware(EventLayout.TARGET_FILTER_QUERY_FORM, EventView.TARGET_FILTER),
-                targetFilterDetailsGridHeader::showAddFilterLayout,
+                ProxyTargetFilterQuery.class, layoutViewAware, targetFilterDetailsGridHeader::showAddFilterLayout,
                 targetFilterDetailsGridHeader::showEditFilterLayout);
         this.targetFilterListener = new FilterChangedListener<>(uiDependencies.getEventBus(), ProxyTarget.class,
-                new EventViewAware(EventView.TARGET_FILTER), targetFilterTargetGrid.getFilterSupport());
+                viewAware, targetFilterTargetGrid.getFilterSupport());
 
         buildLayout(targetFilterDetailsGridHeader, targetFilterTargetGrid, targetFilterCountMessageLabel);
     }
@@ -82,9 +84,7 @@ public class TargetFilterDetailsLayout extends AbstractGridComponentLayout {
                 .updateTotalFilteredTargetsCount(targetFilterTargetGrid.getDataSize()));
     }
 
-    /**
-     * restore the saved state
-     */
+    @Override
     public void restoreState() {
         targetFilterDetailsGridHeader.restoreState();
         if (targetFilterDetailsGridHeader.isFilterQueryValid()) {
@@ -92,10 +92,14 @@ public class TargetFilterDetailsLayout extends AbstractGridComponentLayout {
         }
     }
 
-    /**
-     * unsubscribe all listener
-     */
-    public void unsubscribeListener() {
+    @Override
+    public void subscribeListeners() {
+        showFilterQueryFormListener.subscribe();
+        targetFilterListener.subscribe();
+    }
+
+    @Override
+    public void unsubscribeListeners() {
         showFilterQueryFormListener.unsubscribe();
         targetFilterListener.unsubscribe();
     }

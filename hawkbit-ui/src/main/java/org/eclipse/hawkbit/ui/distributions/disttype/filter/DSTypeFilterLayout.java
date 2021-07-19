@@ -65,20 +65,22 @@ public class DSTypeFilterLayout extends AbstractFilterLayout {
             final DistributionSetTypeManagement distributionSetTypeManagement,
             final DistributionSetManagement distributionSetManagement, final SystemManagement systemManagement,
             final TypeFilterLayoutUiState dSTypeFilterLayoutUiState) {
-        final DsTypeWindowBuilder dsTypeWindowBuilder = new DsTypeWindowBuilder(uiDependencies, distributionSetTypeManagement,
-                distributionSetManagement, softwareModuleTypeManagement);
+        final DsTypeWindowBuilder dsTypeWindowBuilder = new DsTypeWindowBuilder(uiDependencies,
+                distributionSetTypeManagement, distributionSetManagement, softwareModuleTypeManagement);
 
-        this.dsTypeFilterHeader = new DSTypeFilterHeader(uiDependencies, dsTypeWindowBuilder, dSTypeFilterLayoutUiState);
-        this.dSTypeFilterButtons = new DSTypeFilterButtons(uiDependencies, distributionSetTypeManagement, systemManagement,
-                dsTypeWindowBuilder, dSTypeFilterLayoutUiState);
+        this.dsTypeFilterHeader = new DSTypeFilterHeader(uiDependencies, dsTypeWindowBuilder,
+                dSTypeFilterLayoutUiState);
+        this.dSTypeFilterButtons = new DSTypeFilterButtons(uiDependencies, distributionSetTypeManagement,
+                systemManagement, dsTypeWindowBuilder, dSTypeFilterLayoutUiState);
 
+        final EventLayoutViewAware layoutViewAware = new EventLayoutViewAware(EventLayout.DS_TYPE_FILTER,
+                EventView.DISTRIBUTIONS);
         this.gridActionsVisibilityListener = new GridActionsVisibilityListener(uiDependencies.getEventBus(),
-                new EventLayoutViewAware(EventLayout.DS_TYPE_FILTER, EventView.DISTRIBUTIONS),
-                dSTypeFilterButtons::hideActionColumns, dSTypeFilterButtons::showEditColumn,
+                layoutViewAware, dSTypeFilterButtons::hideActionColumns, dSTypeFilterButtons::showEditColumn,
                 dSTypeFilterButtons::showDeleteColumn);
-        this.entityModifiedListener = new EntityModifiedListener.Builder<>(uiDependencies.getEventBus(), ProxyType.class)
-                .entityModifiedAwareSupports(getEntityModifiedAwareSupports())
-                .parentEntityType(ProxyDistributionSet.class).build();
+        this.entityModifiedListener = new EntityModifiedListener.Builder<>(uiDependencies.getEventBus(),
+                ProxyType.class).parentEntityType(ProxyDistributionSet.class).viewAware(layoutViewAware)
+                        .entityModifiedAwareSupports(getEntityModifiedAwareSupports()).build();
 
         buildLayout();
     }
@@ -98,17 +100,24 @@ public class DSTypeFilterLayout extends AbstractFilterLayout {
         return wrapFilterContent(dSTypeFilterButtons);
     }
 
-    /**
-     * Restore state of distribution set filter button
-     */
+    @Override
     public void restoreState() {
         dSTypeFilterButtons.restoreState();
     }
 
-    /**
-     * Unsubscribe event listener
-     */
-    public void unsubscribeListener() {
+    @Override
+    public void onViewEnter() {
+        dSTypeFilterButtons.reevaluateFilter();
+    }
+
+    @Override
+    public void subscribeListeners() {
+        gridActionsVisibilityListener.subscribe();
+        entityModifiedListener.subscribe();
+    }
+
+    @Override
+    public void unsubscribeListeners() {
         gridActionsVisibilityListener.unsubscribe();
         entityModifiedListener.unsubscribe();
     }

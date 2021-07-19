@@ -188,12 +188,9 @@ public class DistributionSetFilterDropAreaSupport implements HeaderSupport {
         if (draggingListener == null) {
             draggingListener = new EntityDraggingListener(eventBus,
                     Collections.singletonList(UIComponentIdProvider.DIST_TABLE_ID), dropAreaLayout);
-            return;
         }
 
-        if (!draggingListener.isSubscribed()) {
-            draggingListener.subscribe();
-        }
+        draggingListener.subscribe();
     }
 
     @Override

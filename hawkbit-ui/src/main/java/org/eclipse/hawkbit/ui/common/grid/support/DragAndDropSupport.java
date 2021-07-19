@@ -66,15 +66,15 @@ public class DragAndDropSupport<T extends ProxyIdentifiableEntity> {
      * Constructor for DragAndDropSupport
      *
      * @param grid
-     *          Vaadin Grid
+     *            Vaadin Grid
      * @param i18n
-     *          VaadinMessageSource
+     *            VaadinMessageSource
      * @param notification
-     *          UINotification
+     *            UINotification
      * @param sourceTargetAssignmentStrategies
-     *          Key value pair of target and assignments
+     *            Key value pair of target and assignments
      * @param eventBus
-     *          UIEventBus
+     *            UIEventBus
      */
     public DragAndDropSupport(final AbstractGrid<T, ?> grid, final VaadinMessageSource i18n,
             final UINotification notification,
@@ -95,7 +95,8 @@ public class DragAndDropSupport<T extends ProxyIdentifiableEntity> {
     /**
      * workaround for target/ds tags that currently do not support selection
      *
-     * @param ignoreSelection Set to true for distribution set and targets
+     * @param ignoreSelection
+     *            Set to true for distribution set and targets
      */
     public void ignoreSelection(final boolean ignoreSelection) {
         this.ignoreSelection = ignoreSelection;
@@ -137,9 +138,9 @@ public class DragAndDropSupport<T extends ProxyIdentifiableEntity> {
 
     /**
      * @param dragOrDropExtension
-     *          AbstractExtension
+     *            AbstractExtension
      * @param dragOrDropDescription
-     *          Description for drag and drop
+     *            Description for drag and drop
      *
      * @return true if grid supports drag and drop else false
      */
@@ -213,12 +214,9 @@ public class DragAndDropSupport<T extends ProxyIdentifiableEntity> {
     private void addGridDropStylingListener() {
         if (draggingListener == null) {
             draggingListener = new EntityDraggingListener(eventBus, sourceTargetAssignmentStrategies.keySet(), grid);
-            return;
         }
 
-        if (!draggingListener.isSubscribed()) {
-            draggingListener.subscribe();
-        }
+        draggingListener.subscribe();
     }
 
     private boolean isDropValid(final String sourceId, final T dropTargetItem,

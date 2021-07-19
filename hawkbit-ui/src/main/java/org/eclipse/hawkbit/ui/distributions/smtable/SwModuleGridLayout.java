@@ -25,7 +25,6 @@ import org.eclipse.hawkbit.ui.common.detailslayout.SoftwareModuleDetailsHeader;
 import org.eclipse.hawkbit.ui.common.event.EventLayout;
 import org.eclipse.hawkbit.ui.common.event.EventLayoutViewAware;
 import org.eclipse.hawkbit.ui.common.event.EventView;
-import org.eclipse.hawkbit.ui.common.event.EventViewAware;
 import org.eclipse.hawkbit.ui.common.layout.MasterEntityAwareComponent;
 import org.eclipse.hawkbit.ui.common.layout.listener.EntityModifiedListener;
 import org.eclipse.hawkbit.ui.common.layout.listener.EntityModifiedListener.EntityModifiedAwareSupport;
@@ -65,7 +64,8 @@ public class SwModuleGridLayout extends AbstractSoftwareModuleGridLayout {
      * @param swModuleGridLayoutUiState
      *            GridLayoutUiState
      */
-    public SwModuleGridLayout(final CommonUiDependencies uiDependencies, final SoftwareModuleManagement softwareModuleManagement,
+    public SwModuleGridLayout(final CommonUiDependencies uiDependencies,
+            final SoftwareModuleManagement softwareModuleManagement,
             final SoftwareModuleTypeManagement softwareModuleTypeManagement,
             final ArtifactManagement artifactManagement, final TypeFilterLayoutUiState smTypeFilterLayoutUiState,
             final GridLayoutUiState swModuleGridLayoutUiState) {
@@ -88,16 +88,18 @@ public class SwModuleGridLayout extends AbstractSoftwareModuleGridLayout {
                 softwareModuleTypeManagement, getSmMetaDataWindowBuilder());
         this.swModuleDetails.buildDetails();
 
+        final EventLayoutViewAware smLayoutViewAware = new EventLayoutViewAware(EventLayout.SM_LIST, getEventView());
+        final EventLayoutViewAware dsLayoutViewAware = new EventLayoutViewAware(EventLayout.DS_LIST, getEventView());
         addEventListener(new FilterChangedListener<>(uiDependencies.getEventBus(), ProxySoftwareModule.class,
-                new EventViewAware(getEventView()), swModuleGrid.getFilterSupport()));
-        addEventListener(new SelectionChangedListener<>(uiDependencies.getEventBus(),
-                new EventLayoutViewAware(EventLayout.DS_LIST, getEventView()), getMasterDsAwareComponents()));
-        addEventListener(new SelectionChangedListener<>(uiDependencies.getEventBus(),
-                new EventLayoutViewAware(EventLayout.SM_LIST, getEventView()), getMasterSmAwareComponents()));
-        addEventListener(new SelectGridEntityListener<>(uiDependencies.getEventBus(),
-                new EventLayoutViewAware(EventLayout.SM_LIST, getEventView()), swModuleGrid.getSelectionSupport()));
+                smLayoutViewAware, swModuleGrid.getFilterSupport()));
+        addEventListener(new SelectionChangedListener<>(uiDependencies.getEventBus(), dsLayoutViewAware,
+                getMasterDsAwareComponents()));
+        addEventListener(new SelectionChangedListener<>(uiDependencies.getEventBus(), smLayoutViewAware,
+                getMasterSmAwareComponents()));
+        addEventListener(new SelectGridEntityListener<>(uiDependencies.getEventBus(), smLayoutViewAware,
+                swModuleGrid.getSelectionSupport()));
         addEventListener(new EntityModifiedListener.Builder<>(uiDependencies.getEventBus(), ProxySoftwareModule.class)
-                .entityModifiedAwareSupports(getSmModifiedAwareSupports()).build());
+                .viewAware(smLayoutViewAware).entityModifiedAwareSupports(getSmModifiedAwareSupports()).build());
 
         buildLayout(swModuleGridHeader, swModuleGrid, softwareModuleDetailsHeader, swModuleDetails);
     }

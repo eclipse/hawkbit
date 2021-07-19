@@ -8,8 +8,11 @@
  */
 package org.eclipse.hawkbit.ui.management.targettag.filter;
 
+import java.util.Collection;
 import java.util.Collections;
+import java.util.stream.Collectors;
 
+import org.eclipse.hawkbit.repository.Identifiable;
 import org.eclipse.hawkbit.repository.TargetManagement;
 import org.eclipse.hawkbit.repository.TargetTagManagement;
 import org.eclipse.hawkbit.ui.common.CommonUiDependencies;
@@ -105,5 +108,10 @@ public class TargetTagFilterButtons extends AbstractTagFilterButtons {
     @Override
     protected Window getUpdateWindow(final ProxyTag clickedFilter) {
         return targetTagWindowBuilder.getWindowForUpdate(clickedFilter);
+    }
+
+    @Override
+    protected Collection<Long> filterExistingTagIds(final Collection<Long> tagIds) {
+        return targetTagManagement.get(tagIds).stream().map(Identifiable::getId).collect(Collectors.toSet());
     }
 }

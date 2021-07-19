@@ -8,6 +8,7 @@
  */
 package org.eclipse.hawkbit.ui.common.layout;
 
+import org.eclipse.hawkbit.ui.common.EventListenersAwareLayout;
 import org.eclipse.hawkbit.ui.common.detailslayout.AbstractGridDetailsLayout;
 import org.eclipse.hawkbit.ui.common.grid.AbstractGrid;
 import org.eclipse.hawkbit.ui.common.grid.header.AbstractDetailsHeader;
@@ -24,7 +25,7 @@ import com.vaadin.ui.VerticalLayout;
  * {@link AbstractGridHeader}, grid {@link AbstractGrid}, optional grid details
  * {@link AbstractGridDetailsLayout} and optional footer.
  */
-public abstract class AbstractGridComponentLayout extends VerticalLayout {
+public abstract class AbstractGridComponentLayout extends VerticalLayout implements EventListenersAwareLayout {
     private static final long serialVersionUID = 1L;
 
     private Component detailsLayout;

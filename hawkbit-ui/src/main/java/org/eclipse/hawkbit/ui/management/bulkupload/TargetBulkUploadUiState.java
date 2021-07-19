@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.eclipse.hawkbit.ui.common.data.proxies.ProxyDistributionSetInfo;
+import org.eclipse.hawkbit.ui.common.event.BulkUploadEventPayload;
 
 /**
  * Target bulk upload ui state
@@ -93,5 +94,27 @@ public class TargetBulkUploadUiState implements Serializable {
      */
     public void setDescription(final String description) {
         this.description = description;
+    }
+
+    /**
+     * Updates state on bulk upload events
+     *
+     * @param eventPayload
+     *            BulkUploadEventPayload
+     */
+    public void onBulkUploadChanged(final BulkUploadEventPayload eventPayload) {
+        switch (eventPayload.getBulkUploadState()) {
+        case UPLOAD_STARTED:
+            setInProgress(true);
+            break;
+        case UPLOAD_FAILED:
+            setInProgress(false);
+            break;
+        case BULK_UPLOAD_COMPLETED:
+            setInProgress(false);
+            break;
+        default:
+            break;
+        }
     }
 }

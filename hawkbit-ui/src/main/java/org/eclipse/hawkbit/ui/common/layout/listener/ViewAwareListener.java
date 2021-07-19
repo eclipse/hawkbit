@@ -30,7 +30,7 @@ public abstract class ViewAwareListener extends TopicEventListener {
      * @param viewAware
      *            EventViewAware
      */
-    public ViewAwareListener(final UIEventBus eventBus, final String topic, final EventViewAware viewAware) {
+    protected ViewAwareListener(final UIEventBus eventBus, final String topic, final EventViewAware viewAware) {
         super(eventBus, topic);
 
         this.viewAware = viewAware;
@@ -46,7 +46,7 @@ public abstract class ViewAwareListener extends TopicEventListener {
      * @param viewAware
      *            EventViewAware
      */
-    public ViewAwareListener(final UIEventBus eventBus, final Collection<String> topics,
+    protected ViewAwareListener(final UIEventBus eventBus, final Collection<String> topics,
             final EventViewAware viewAware) {
         super(eventBus, topics);
 
@@ -64,6 +64,6 @@ public abstract class ViewAwareListener extends TopicEventListener {
      * @return View
      */
     public EventView getView() {
-        return viewAware.getView();
+        return viewAware != null ? viewAware.getView() : null;
     }
 }

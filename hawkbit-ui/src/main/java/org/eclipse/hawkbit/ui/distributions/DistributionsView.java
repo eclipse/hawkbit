@@ -8,11 +8,9 @@
  */
 package org.eclipse.hawkbit.ui.distributions;
 
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Map;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 
 import org.eclipse.hawkbit.repository.ArtifactManagement;
 import org.eclipse.hawkbit.repository.DistributionSetManagement;
@@ -28,6 +26,7 @@ import org.eclipse.hawkbit.repository.TenantConfigurationManagement;
 import org.eclipse.hawkbit.security.SystemSecurityContext;
 import org.eclipse.hawkbit.ui.AbstractHawkbitUI;
 import org.eclipse.hawkbit.ui.SpPermissionChecker;
+import org.eclipse.hawkbit.ui.common.AbstractEventListenersAwareView;
 import org.eclipse.hawkbit.ui.common.CommonUiDependencies;
 import org.eclipse.hawkbit.ui.common.event.EventLayout;
 import org.eclipse.hawkbit.ui.common.event.EventView;
@@ -47,14 +46,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.vaadin.spring.events.EventBus.UIEventBus;
 
 import com.vaadin.annotations.JavaScript;
-import com.vaadin.navigator.View;
 import com.vaadin.server.Page;
 import com.vaadin.server.Page.BrowserWindowResizeEvent;
 import com.vaadin.server.Page.BrowserWindowResizeListener;
 import com.vaadin.spring.annotation.SpringView;
 import com.vaadin.spring.annotation.UIScope;
 import com.vaadin.ui.HorizontalLayout;
-import com.vaadin.ui.VerticalLayout;
 
 /**
  * Manage distributions and distributions type view.
@@ -62,7 +59,7 @@ import com.vaadin.ui.VerticalLayout;
 @UIScope
 @SpringView(name = DistributionsView.VIEW_NAME, ui = AbstractHawkbitUI.class)
 @JavaScript("vaadin://js/dynamicStylesheet.js")
-public class DistributionsView extends VerticalLayout implements View, BrowserWindowResizeListener {
+public class DistributionsView extends AbstractEventListenersAwareView implements BrowserWindowResizeListener {
     private static final long serialVersionUID = 1L;
 
     public static final String VIEW_NAME = "distributions";
@@ -94,8 +91,8 @@ public class DistributionsView extends VerticalLayout implements View, BrowserWi
         this.permChecker = permChecker;
         this.manageDistUIState = manageDistUIState;
 
-        final CommonUiDependencies uiDependencies = new CommonUiDependencies(i18n, entityFactory, eventBus, uiNotification,
-                permChecker);
+        final CommonUiDependencies uiDependencies = new CommonUiDependencies(i18n, entityFactory, eventBus,
+                uiNotification, permChecker);
 
         if (permChecker.hasReadRepositoryPermission()) {
             this.dsTypeFilterLayout = new DSTypeFilterLayout(uiDependencies, softwareModuleTypeManagement,
@@ -112,6 +109,9 @@ public class DistributionsView extends VerticalLayout implements View, BrowserWi
                     manageDistUIState.getSwModuleGridLayoutUiState());
             this.distSMTypeFilterLayout = new DistSMTypeFilterLayout(uiDependencies, softwareModuleTypeManagement,
                     manageDistUIState.getSmTypeFilterLayoutUiState());
+
+            addEventAwareLayouts(Arrays.asList(dsTypeFilterLayout, distributionSetGridLayout, swModuleGridLayout,
+                    distSMTypeFilterLayout));
 
             final Map<EventLayout, VisibilityHandler> layoutVisibilityHandlers = new EnumMap<>(EventLayout.class);
             layoutVisibilityHandlers.put(EventLayout.DS_TYPE_FILTER,
@@ -138,16 +138,16 @@ public class DistributionsView extends VerticalLayout implements View, BrowserWi
         }
     }
 
-    @PostConstruct
-    void init() {
+    @Override
+    protected void init() {
         if (permChecker.hasReadRepositoryPermission()) {
-            buildLayout();
-            restoreState();
+            super.init();
             Page.getCurrent().addBrowserWindowResizeListener(this);
         }
     }
 
-    private void buildLayout() {
+    @Override
+    protected void buildLayout() {
         setMargin(false);
         setSpacing(false);
         setSizeFull();
@@ -175,24 +175,33 @@ public class DistributionsView extends VerticalLayout implements View, BrowserWi
         mainLayout.setExpandRatio(distSMTypeFilterLayout, 0F);
     }
 
-    private void restoreState() {
+    @Override
+    protected void restoreState() {
+        if (permChecker.hasReadRepositoryPermission()) {
+            restoreDsWidgetsState();
+            restoreSmWidgetsState();
+        }
+
+        super.restoreState();
+    }
+
+    private void restoreDsWidgetsState() {
         if (manageDistUIState.getDsTypeFilterLayoutUiState().isHidden()
                 || manageDistUIState.getSwModuleGridLayoutUiState().isMaximized()) {
             hideDsTypeLayout();
         } else {
             showDsTypeLayout();
         }
-        dsTypeFilterLayout.restoreState();
 
         if (manageDistUIState.getDistributionSetGridLayoutUiState().isMaximized()) {
             maximizeDsGridLayout();
         }
-        distributionSetGridLayout.restoreState();
+    }
 
+    private void restoreSmWidgetsState() {
         if (manageDistUIState.getSwModuleGridLayoutUiState().isMaximized()) {
             maximizeSmGridLayout();
         }
-        swModuleGridLayout.restoreState();
 
         if (manageDistUIState.getSmTypeFilterLayoutUiState().isHidden()
                 || manageDistUIState.getDistributionSetGridLayoutUiState().isMaximized()) {
@@ -200,7 +209,6 @@ public class DistributionsView extends VerticalLayout implements View, BrowserWi
         } else {
             showSmTypeLayout();
         }
-        distSMTypeFilterLayout.restoreState();
     }
 
     private void showDsTypeLayout() {
@@ -300,16 +308,28 @@ public class DistributionsView extends VerticalLayout implements View, BrowserWi
         }
     }
 
-    @PreDestroy
-    void destroy() {
+    @Override
+    public String getViewName() {
+        return DistributionsView.VIEW_NAME;
+    }
+
+    @Override
+    protected void subscribeListeners() {
+        if (permChecker.hasReadRepositoryPermission()) {
+            layoutVisibilityListener.subscribe();
+            layoutResizeListener.subscribe();
+        }
+
+        super.subscribeListeners();
+    }
+
+    @Override
+    protected void unsubscribeListeners() {
         if (permChecker.hasReadRepositoryPermission()) {
             layoutVisibilityListener.unsubscribe();
             layoutResizeListener.unsubscribe();
-
-            dsTypeFilterLayout.unsubscribeListener();
-            distributionSetGridLayout.unsubscribeListener();
-            swModuleGridLayout.unsubscribeListener();
-            distSMTypeFilterLayout.unsubscribeListener();
         }
+
+        super.unsubscribeListeners();
     }
 }

@@ -31,7 +31,7 @@ public abstract class LayoutViewAwareListener extends TopicEventListener {
      * @param layoutViewAware
      *            EventLayoutViewAware
      */
-    public LayoutViewAwareListener(final UIEventBus eventBus, final String topic,
+    protected LayoutViewAwareListener(final UIEventBus eventBus, final String topic,
             final EventLayoutViewAware layoutViewAware) {
         super(eventBus, topic);
 
@@ -48,7 +48,7 @@ public abstract class LayoutViewAwareListener extends TopicEventListener {
      * @param layoutViewAware
      *            EventLayoutViewAware
      */
-    public LayoutViewAwareListener(final UIEventBus eventBus, final Collection<String> topics,
+    protected LayoutViewAwareListener(final UIEventBus eventBus, final Collection<String> topics,
             final EventLayoutViewAware layoutViewAware) {
         super(eventBus, topics);
 

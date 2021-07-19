@@ -52,12 +52,13 @@ public class TargetTagFilterLayout extends AbstractFilterLayout {
             final TargetFilterQueryManagement targetFilterQueryManagement,
             final TargetTagManagement targetTagManagement, final TargetManagement targetManagement,
             final TargetTagFilterLayoutUiState targetTagFilterLayoutUiState) {
-        final TargetTagWindowBuilder targetTagWindowBuilder = new TargetTagWindowBuilder(uiDependencies, targetTagManagement);
+        final TargetTagWindowBuilder targetTagWindowBuilder = new TargetTagWindowBuilder(uiDependencies,
+                targetTagManagement);
 
         this.targetTagFilterHeader = new TargetTagFilterHeader(uiDependencies, targetTagFilterLayoutUiState,
                 targetTagWindowBuilder);
-        this.multipleTargetFilter = new MultipleTargetFilter(uiDependencies, targetFilterQueryManagement, targetTagManagement,
-                targetManagement, targetTagFilterLayoutUiState, targetTagWindowBuilder);
+        this.multipleTargetFilter = new MultipleTargetFilter(uiDependencies, targetFilterQueryManagement,
+                targetTagManagement, targetManagement, targetTagFilterLayoutUiState, targetTagWindowBuilder);
 
         this.filterTabChangedListener = new GenericEventListener<>(uiDependencies.getEventBus(),
                 EventTopics.TARGET_FILTER_TAB_CHANGED, this::onTargetFilterTabChanged);
@@ -83,19 +84,26 @@ public class TargetTagFilterLayout extends AbstractFilterLayout {
         return multipleTargetFilter;
     }
 
-    /**
-     * Restore the target filter state
-     */
+    @Override
     public void restoreState() {
         targetTagFilterHeader.restoreState();
         multipleTargetFilter.restoreState();
     }
 
-    /**
-     * Unsubscribe the event listener
-     */
-    public void unsubscribeListener() {
+    @Override
+    public void onViewEnter() {
+        multipleTargetFilter.onViewEnter();
+    }
+
+    @Override
+    public void subscribeListeners() {
+        filterTabChangedListener.subscribe();
+        multipleTargetFilter.subscribeListeners();
+    }
+
+    @Override
+    public void unsubscribeListeners() {
         filterTabChangedListener.unsubscribe();
-        multipleTargetFilter.unsubscribeListener();
+        multipleTargetFilter.unsubscribeListeners();
     }
 }

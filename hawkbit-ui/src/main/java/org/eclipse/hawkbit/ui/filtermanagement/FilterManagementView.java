@@ -8,11 +8,9 @@
  */
 package org.eclipse.hawkbit.ui.filtermanagement;
 
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Map;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 
 import org.eclipse.hawkbit.repository.DistributionSetManagement;
 import org.eclipse.hawkbit.repository.EntityFactory;
@@ -22,6 +20,7 @@ import org.eclipse.hawkbit.repository.rsql.RsqlValidationOracle;
 import org.eclipse.hawkbit.ui.AbstractHawkbitUI;
 import org.eclipse.hawkbit.ui.SpPermissionChecker;
 import org.eclipse.hawkbit.ui.UiProperties;
+import org.eclipse.hawkbit.ui.common.AbstractEventListenersAwareView;
 import org.eclipse.hawkbit.ui.common.CommonUiDependencies;
 import org.eclipse.hawkbit.ui.common.data.suppliers.TargetFilterStateDataSupplier;
 import org.eclipse.hawkbit.ui.common.event.EventLayout;
@@ -36,18 +35,16 @@ import org.eclipse.hawkbit.ui.utils.VaadinMessageSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.vaadin.spring.events.EventBus.UIEventBus;
 
-import com.vaadin.navigator.View;
 import com.vaadin.spring.annotation.SpringView;
 import com.vaadin.spring.annotation.UIScope;
 import com.vaadin.ui.Alignment;
-import com.vaadin.ui.VerticalLayout;
 
 /**
  * View for custom target filter management.
  */
 @UIScope
 @SpringView(name = FilterManagementView.VIEW_NAME, ui = AbstractHawkbitUI.class)
-public class FilterManagementView extends VerticalLayout implements View {
+public class FilterManagementView extends AbstractEventListenersAwareView {
     private static final long serialVersionUID = 1L;
 
     public static final String VIEW_NAME = "targetFilters";
@@ -78,6 +75,8 @@ public class FilterManagementView extends VerticalLayout implements View {
                 rsqlValidationOracle, targetFilterQueryManagement, targetFilterStateDataSupplier,
                 filterManagementUIState.getDetailsLayoutUiState());
 
+        addEventAwareLayouts(Arrays.asList(targetFilterGridLayout, targetFilterDetailsLayout));
+
         final Map<EventLayout, VisibilityHandler> layoutVisibilityHandlers = new EnumMap<>(EventLayout.class);
         layoutVisibilityHandlers.put(EventLayout.TARGET_FILTER_QUERY_LIST,
                 new VisibilityHandler(this::showTfqListLayout, this::showTfqFormLayout));
@@ -87,13 +86,8 @@ public class FilterManagementView extends VerticalLayout implements View {
                 new EventViewAware(EventView.TARGET_FILTER), layoutVisibilityHandlers);
     }
 
-    @PostConstruct
-    void init() {
-        buildLayout();
-        restoreState();
-    }
-
-    private void buildLayout() {
+    @Override
+    protected void buildLayout() {
         setMargin(false);
         setSpacing(false);
         setSizeFull();
@@ -120,21 +114,33 @@ public class FilterManagementView extends VerticalLayout implements View {
         targetFilterDetailsLayout.setVisible(true);
     }
 
-    private void restoreState() {
+    @Override
+    protected void restoreState() {
         if (FilterView.FILTERS == filterManagementUIState.getCurrentView()) {
             showTfqListLayout();
         } else if (FilterView.DETAILS == filterManagementUIState.getCurrentView()) {
             showTfqFormLayout();
         }
-        targetFilterDetailsLayout.restoreState();
-        targetFilterGridLayout.restoreState();
+
+        super.restoreState();
     }
 
-    @PreDestroy
-    void destroy() {
+    @Override
+    public String getViewName() {
+        return FilterManagementView.VIEW_NAME;
+    }
+
+    @Override
+    protected void subscribeListeners() {
+        layoutVisibilityListener.subscribe();
+
+        super.subscribeListeners();
+    }
+
+    @Override
+    protected void unsubscribeListeners() {
         layoutVisibilityListener.unsubscribe();
 
-        targetFilterGridLayout.unsubscribeListener();
-        targetFilterDetailsLayout.unsubscribeListener();
+        super.unsubscribeListeners();
     }
 }

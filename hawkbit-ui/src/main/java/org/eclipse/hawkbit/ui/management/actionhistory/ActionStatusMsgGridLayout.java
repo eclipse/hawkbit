@@ -40,7 +40,8 @@ public class ActionStatusMsgGridLayout extends AbstractGridComponentLayout {
      * @param deploymentManagement
      *            DeploymentManagement
      */
-    public ActionStatusMsgGridLayout(final CommonUiDependencies uiDependencies, final DeploymentManagement deploymentManagement) {
+    public ActionStatusMsgGridLayout(final CommonUiDependencies uiDependencies,
+            final DeploymentManagement deploymentManagement) {
         this.actionStatusMsgHeader = new ActionStatusMsgGridHeader(uiDependencies.getI18n());
         this.actionStatusMsgGrid = new ActionStatusMsgGrid(uiDependencies, deploymentManagement);
 
@@ -79,10 +80,13 @@ public class ActionStatusMsgGridLayout extends AbstractGridComponentLayout {
         actionStatusMsgGrid.getSelectionSupport().disableSelection();
     }
 
-    /**
-     * Unsubscribe the changed listener
-     */
-    public void unsubscribeListener() {
+    @Override
+    public void subscribeListeners() {
+        selectionChangedListener.subscribe();
+    }
+
+    @Override
+    public void unsubscribeListeners() {
         selectionChangedListener.unsubscribe();
     }
 }

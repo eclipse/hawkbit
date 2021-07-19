@@ -35,9 +35,9 @@ public abstract class AbstractFooterSupport {
     }
 
     /**
-     * Get the count message label.
+     * Get the footer message label.
      *
-     * @return count message
+     * @return footer message
      */
     protected abstract Label getFooterMessageLabel();
 }

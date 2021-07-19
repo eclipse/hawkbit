@@ -114,4 +114,9 @@ public class SMTypeFilterButtons extends AbstractTypeFilterButtons {
     protected Window getUpdateWindow(final ProxyType clickedFilter) {
         return smTypeWindowBuilder.getWindowForUpdate(clickedFilter);
     }
+
+    @Override
+    protected boolean typeExists(final Long typeId) {
+        return softwareModuleTypeManagement.exists(typeId);
+    }
 }

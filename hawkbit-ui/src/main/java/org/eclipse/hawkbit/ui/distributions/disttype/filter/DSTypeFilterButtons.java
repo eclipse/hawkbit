@@ -109,4 +109,9 @@ public class DSTypeFilterButtons extends AbstractTypeFilterButtons {
     protected Window getUpdateWindow(final ProxyType clickedFilter) {
         return dsTypeWindowBuilder.getWindowForUpdate(clickedFilter);
     }
+
+    @Override
+    protected boolean typeExists(final Long typeId) {
+        return distributionSetTypeManagement.exists(typeId);
+    }
 }

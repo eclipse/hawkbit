@@ -51,7 +51,7 @@ public abstract class AbstractDistributionSetGridLayout extends AbstractGridComp
      * @param eventView
      *            EventView
      */
-    public AbstractDistributionSetGridLayout(final CommonUiDependencies uiDependencies,
+    protected AbstractDistributionSetGridLayout(final CommonUiDependencies uiDependencies,
             final SystemManagement systemManagement, final SystemSecurityContext systemSecurityContext,
             final TenantConfigurationManagement configManagement,
             final DistributionSetManagement distributionSetManagement,
@@ -94,9 +94,11 @@ public abstract class AbstractDistributionSetGridLayout extends AbstractGridComp
     /**
      * Returns the {@link AbstractDsGrid}
      *
+     * @param <F>
+     *            Generic filter type
      * @return the distributionGrid
      */
-    public abstract <T extends DsFilterParams> AbstractDsGrid<T> getDistributionGrid();
+    public abstract <F extends DsFilterParams> AbstractDsGrid<F> getDistributionGrid();
 
     /**
      * Returns the {@link DistributionSetGridHeader}
@@ -135,9 +137,7 @@ public abstract class AbstractDistributionSetGridLayout extends AbstractGridComp
         showDetailsLayout();
     }
 
-    /**
-     * Restore the distribution grid state
-     */
+    @Override
     public void restoreState() {
         getDistributionSetGridHeader().restoreState();
         getDistributionGrid().restoreState();
@@ -147,10 +147,18 @@ public abstract class AbstractDistributionSetGridLayout extends AbstractGridComp
         listeners.add(listener);
     }
 
-    /**
-     * Unsubscribe the event listeners.
-     */
-    public void unsubscribeListener() {
+    @Override
+    public void onViewEnter() {
+        getDistributionGrid().getSelectionSupport().reselectCurrentEntity();
+    }
+
+    @Override
+    public void subscribeListeners() {
+        listeners.forEach(TopicEventListener::subscribe);
+    }
+
+    @Override
+    public void unsubscribeListeners() {
         listeners.forEach(TopicEventListener::unsubscribe);
     }
 }

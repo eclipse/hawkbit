@@ -72,9 +72,10 @@ public class RolloutGridLayout extends AbstractGridComponentLayout {
      * @param systemSecurityContext
      *            SystemSecurityContext
      */
-    public RolloutGridLayout(final CommonUiDependencies uiDependencies, final RolloutManagementUIState rolloutManagementUIState,
-            final RolloutManagement rolloutManagement, final TargetManagement targetManagement,
-            final UiProperties uiProperties, final TargetFilterQueryManagement targetFilterQueryManagement,
+    public RolloutGridLayout(final CommonUiDependencies uiDependencies,
+            final RolloutManagementUIState rolloutManagementUIState, final RolloutManagement rolloutManagement,
+            final TargetManagement targetManagement, final UiProperties uiProperties,
+            final TargetFilterQueryManagement targetFilterQueryManagement,
             final RolloutGroupManagement rolloutGroupManagement, final QuotaManagement quotaManagement,
             final TenantConfigurationManagement tenantConfigManagement,
             final DistributionSetManagement distributionSetManagement,
@@ -89,10 +90,12 @@ public class RolloutGridLayout extends AbstractGridComponentLayout {
         this.rolloutListGrid = new RolloutGrid(uiDependencies, rolloutManagement, rolloutGroupManagement,
                 rolloutManagementUIState, tenantConfigManagement, rolloutWindowBuilder, systemSecurityContext);
 
+        final EventViewAware viewAware = new EventViewAware(EventView.ROLLOUT);
         this.rolloutFilterListener = new FilterChangedListener<>(uiDependencies.getEventBus(), ProxyRollout.class,
-                new EventViewAware(EventView.ROLLOUT), rolloutListGrid.getFilterSupport());
-        this.rolloutModifiedListener = new EntityModifiedListener.Builder<>(uiDependencies.getEventBus(), ProxyRollout.class)
-                .entityModifiedAwareSupports(getRolloutModifiedAwareSupports()).build();
+                viewAware, rolloutListGrid.getFilterSupport());
+        this.rolloutModifiedListener = new EntityModifiedListener.Builder<>(uiDependencies.getEventBus(),
+                ProxyRollout.class).viewAware(viewAware).entityModifiedAwareSupports(getRolloutModifiedAwareSupports())
+                        .build();
 
         buildLayout(rolloutListHeader, rolloutListGrid);
     }
@@ -104,18 +107,25 @@ public class RolloutGridLayout extends AbstractGridComponentLayout {
                         rolloutListGrid::mapIdToProxyEntity, rolloutListGrid::onSelectedRolloutDeleted));
     }
 
-    /**
-     * Restore the rollout grid state
-     */
+    @Override
     public void restoreState() {
         rolloutListHeader.restoreState();
         rolloutListGrid.restoreState();
     }
 
-    /**
-     * unsubscribe all listener
-     */
-    public void unsubscribeListener() {
+    @Override
+    public void onViewEnter() {
+        rolloutListGrid.reselectCurrentRollout();
+    }
+
+    @Override
+    public void subscribeListeners() {
+        rolloutFilterListener.subscribe();
+        rolloutModifiedListener.subscribe();
+    }
+
+    @Override
+    public void unsubscribeListeners() {
         rolloutFilterListener.unsubscribe();
         rolloutModifiedListener.unsubscribe();
     }

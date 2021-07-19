@@ -77,11 +77,11 @@ public class RolloutFormLayout extends ValidatableLayout {
      * Constructor for RolloutFormLayout
      *
      * @param i18n
-     *          VaadinMessageSource
+     *            VaadinMessageSource
      * @param distributionSetDataProvider
-     *          DistributionSetStatelessDataProvider
+     *            DistributionSetStatelessDataProvider
      * @param targetFilterQueryDataProvider
-     *          TargetFilterQueryDataProvider
+     *            TargetFilterQueryDataProvider
      */
     public RolloutFormLayout(final VaadinMessageSource i18n,
             final DistributionSetStatelessDataProvider distributionSetDataProvider,
@@ -206,7 +206,7 @@ public class RolloutFormLayout extends ValidatableLayout {
      * Add rollout form to add layout
      *
      * @param layout
-     *          Grid layout
+     *            Grid layout
      */
     public void addFormToAddLayout(final GridLayout layout) {
         targetFilterQueryField.unbind();
@@ -218,7 +218,7 @@ public class RolloutFormLayout extends ValidatableLayout {
      * Add rollout form to edit layout
      *
      * @param layout
-     *          Grid layout
+     *            Grid layout
      */
     public void addFormToEditLayout(final GridLayout layout) {
         targetFilterQueryCombo.unbind();
@@ -252,6 +252,7 @@ public class RolloutFormLayout extends ValidatableLayout {
      */
     public void disableFieldsOnEditForInActive() {
         targetFilterQueryField.getComponent().setEnabled(false);
+        dsCombo.setEnabled(false);
     }
 
     /**
@@ -260,7 +261,6 @@ public class RolloutFormLayout extends ValidatableLayout {
     public void disableFieldsOnEditForActive() {
         disableFieldsOnEditForInActive();
 
-        dsCombo.setEnabled(false);
         actionTypeLayout.getComponent().setEnabled(false);
         autoStartOptionGroupLayout.getComponent().setEnabled(false);
     }
@@ -279,7 +279,7 @@ public class RolloutFormLayout extends ValidatableLayout {
      * Sets the changed listener for filter query
      *
      * @param filterQueryChangedListener
-     *          Changed listener
+     *            Changed listener
      */
     public void setFilterQueryChangedListener(final Consumer<String> filterQueryChangedListener) {
         this.filterQueryChangedListener = filterQueryChangedListener;
@@ -289,7 +289,7 @@ public class RolloutFormLayout extends ValidatableLayout {
      * Sets the count of total targets
      *
      * @param totalTargets
-     *          Total targets
+     *            Total targets
      */
     public void setTotalTargets(final Long totalTargets) {
         this.totalTargets = totalTargets;
@@ -301,7 +301,7 @@ public class RolloutFormLayout extends ValidatableLayout {
      * Sets the rollout form bean in binder
      *
      * @param bean
-     *          ProxyRolloutForm
+     *            ProxyRolloutForm
      */
     public void setBean(final ProxyRolloutForm bean) {
         rolloutId = bean.getId();
@@ -312,7 +312,7 @@ public class RolloutFormLayout extends ValidatableLayout {
      * @return Updated rollout form bean
      *
      * @throws ValidationException
-     *          ValidationException
+     *             ValidationException
      */
     public ProxyRolloutForm getBean() throws ValidationException {
         final ProxyRolloutForm bean = new ProxyRolloutForm();

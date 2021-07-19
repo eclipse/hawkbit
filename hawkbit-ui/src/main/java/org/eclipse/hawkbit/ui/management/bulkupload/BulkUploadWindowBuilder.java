@@ -82,6 +82,7 @@ public class BulkUploadWindowBuilder {
             targetBulkUpdateWindowLayout = new TargetBulkUpdateWindowLayout(uiDependencies, targetManagement,
                     deploymentManagement, tagManagement, distributionSetManagement, uiproperties, uiExecutor,
                     targetBulkUploadUiState);
+            targetBulkUpdateWindowLayout.clearUiState();
         }
 
         final Window bulkUploadWindow = new WindowBuilder(SPUIDefinitions.CREATE_UPDATE_WINDOW)

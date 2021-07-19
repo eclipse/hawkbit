@@ -59,7 +59,8 @@ public class MultipleTargetFilter extends Accordion {
     private final transient EntityModifiedListener<ProxyTag> entityTagModifiedListener;
     private final transient EntityModifiedListener<ProxyTargetFilterQuery> entityFilterQueryModifiedListener;
 
-    MultipleTargetFilter(final CommonUiDependencies uiDependencies, final TargetFilterQueryManagement targetFilterQueryManagement,
+    MultipleTargetFilter(final CommonUiDependencies uiDependencies,
+            final TargetFilterQueryManagement targetFilterQueryManagement,
             final TargetTagManagement targetTagManagement, final TargetManagement targetManagement,
             final TargetTagFilterLayoutUiState targetTagFilterLayoutUiState,
             final TargetTagWindowBuilder targetTagWindowBuilder) {
@@ -74,14 +75,16 @@ public class MultipleTargetFilter extends Accordion {
         this.customFilterTab = new TargetFilterQueryButtons(i18n, eventBus, targetFilterQueryManagement,
                 targetTagFilterLayoutUiState);
 
-        this.gridActionsVisibilityListener = new GridActionsVisibilityListener(eventBus,
-                new EventLayoutViewAware(EventLayout.TARGET_TAG_FILTER, EventView.DEPLOYMENT),
+        final EventLayoutViewAware layoutViewAware = new EventLayoutViewAware(EventLayout.TARGET_TAG_FILTER,
+                EventView.DEPLOYMENT);
+        this.gridActionsVisibilityListener = new GridActionsVisibilityListener(eventBus, layoutViewAware,
                 filterByButtons::hideActionColumns, filterByButtons::showEditColumn, filterByButtons::showDeleteColumn);
         this.entityTagModifiedListener = new EntityModifiedListener.Builder<>(eventBus, ProxyTag.class)
-                .entityModifiedAwareSupports(getTagModifiedAwareSupports()).parentEntityType(ProxyTarget.class).build();
+                .parentEntityType(ProxyTarget.class).viewAware(layoutViewAware)
+                .entityModifiedAwareSupports(getTagModifiedAwareSupports()).build();
         this.entityFilterQueryModifiedListener = new EntityModifiedListener.Builder<>(eventBus,
-                ProxyTargetFilterQuery.class).entityModifiedAwareSupports(getFilterQueryModifiedAwareSupports())
-                        .build();
+                ProxyTargetFilterQuery.class).viewAware(layoutViewAware)
+                        .entityModifiedAwareSupports(getFilterQueryModifiedAwareSupports()).build();
 
         init();
         addTabs();
@@ -176,9 +179,26 @@ public class MultipleTargetFilter extends Accordion {
     }
 
     /**
-     * Unsubscribe the event listener
+     * Update components on view enter
      */
-    public void unsubscribeListener() {
+    public void onViewEnter() {
+        filterByButtons.reevaluateFilter();
+        customFilterTab.reevaluateFilter();
+    }
+
+    /**
+     * Subscribe event listeners
+     */
+    public void subscribeListeners() {
+        gridActionsVisibilityListener.subscribe();
+        entityTagModifiedListener.subscribe();
+        entityFilterQueryModifiedListener.subscribe();
+    }
+
+    /**
+     * Unsubscribe event listeners
+     */
+    public void unsubscribeListeners() {
         gridActionsVisibilityListener.unsubscribe();
         entityTagModifiedListener.unsubscribe();
         entityFilterQueryModifiedListener.unsubscribe();

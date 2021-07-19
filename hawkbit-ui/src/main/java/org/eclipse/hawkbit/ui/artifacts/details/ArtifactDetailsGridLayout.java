@@ -58,7 +58,8 @@ public class ArtifactDetailsGridLayout extends AbstractGridComponentLayout {
      * @param multipartConfigElement
      *            MultipartConfigElement
      */
-    public ArtifactDetailsGridLayout(final CommonUiDependencies uiDependencies, final ArtifactUploadState artifactUploadState,
+    public ArtifactDetailsGridLayout(final CommonUiDependencies uiDependencies,
+            final ArtifactUploadState artifactUploadState,
             final ArtifactDetailsGridLayoutUiState artifactDetailsGridLayoutUiState,
             final ArtifactManagement artifactManagement, final SoftwareModuleManagement softwareManagement,
             final MultipartConfigElement multipartConfigElement) {
@@ -66,8 +67,8 @@ public class ArtifactDetailsGridLayout extends AbstractGridComponentLayout {
         this.artifactDetailsGrid = new ArtifactDetailsGrid(uiDependencies, artifactManagement);
 
         if (uiDependencies.getPermChecker().hasCreateRepositoryPermission()) {
-            this.uploadDropAreaLayout = new UploadDropAreaLayout(uiDependencies, artifactUploadState, multipartConfigElement,
-                    softwareManagement, artifactManagement);
+            this.uploadDropAreaLayout = new UploadDropAreaLayout(uiDependencies, artifactUploadState,
+                    multipartConfigElement, softwareManagement, artifactManagement);
 
             buildLayout(artifactDetailsHeader, artifactDetailsGrid, uploadDropAreaLayout);
         } else {
@@ -115,9 +116,7 @@ public class ArtifactDetailsGridLayout extends AbstractGridComponentLayout {
         showDetailsLayout();
     }
 
-    /**
-     * Is called when view is shown to the user
-     */
+    @Override
     public void restoreState() {
         artifactDetailsHeader.restoreState();
 
@@ -126,10 +125,14 @@ public class ArtifactDetailsGridLayout extends AbstractGridComponentLayout {
         }
     }
 
-    /**
-     * Unsubscribe the even listeners for selection change and fileupload
-     */
-    public void unsubscribeListener() {
+    @Override
+    public void subscribeListeners() {
+        selectionChangedListener.subscribe();
+        fileUploadChangedListener.subscribe();
+    }
+
+    @Override
+    public void unsubscribeListeners() {
         selectionChangedListener.unsubscribe();
         fileUploadChangedListener.unsubscribe();
     }

@@ -163,6 +163,10 @@ public class RolloutGroupGrid extends AbstractGrid<ProxyRolloutGroup, Long> {
         getSelectionSupport().sendSelectionChangedEvent(SelectionChangedEventType.ENTITY_SELECTED, rolloutGroup);
         rolloutManagementUIState.setSelectedRolloutGroupName(rolloutGroup.getName());
 
+        showRolloutGroupTargetsListLayout();
+    }
+
+    private void showRolloutGroupTargetsListLayout() {
         eventBus.publish(CommandTopics.CHANGE_LAYOUT_VISIBILITY, this, new LayoutVisibilityEventPayload(
                 VisibilityType.SHOW, EventLayout.ROLLOUT_GROUP_TARGET_LIST, EventView.ROLLOUT));
     }
@@ -179,8 +183,7 @@ public class RolloutGroupGrid extends AbstractGrid<ProxyRolloutGroup, Long> {
     }
 
     private void updateGridItem(final RolloutGroup rolloutGroup) {
-        final ProxyRolloutGroup proxyRolloutGroup = RolloutGroupToProxyRolloutGroupMapper.mapGroup(rolloutGroup);
-        getDataProvider().refreshItem(proxyRolloutGroup);
+        getDataProvider().refreshItem(rolloutGroupMapper.map(rolloutGroup));
     }
 
     @Override

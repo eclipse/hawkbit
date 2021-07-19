@@ -170,6 +170,13 @@ public class FilterSupport<T, F> {
     }
 
     /**
+     * @return Original data provider
+     */
+    public DataProvider<T, F> getOriginalDataProvider() {
+        return filterDataProvider.getDataProvider();
+    }
+
+    /**
      * Verifies if filter type is supported
      *
      * @param filterType
@@ -293,6 +300,15 @@ public class FilterSupport<T, F> {
         public void setFilter(final F filter) {
             this.customFilter = filter;
             refreshAll();
+        }
+
+        /**
+         * Gets original data provider.
+         *
+         * @return original data provider
+         */
+        public DataProvider<T, F> getDataProvider() {
+            return dataProvider;
         }
     }
 }

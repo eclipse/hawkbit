@@ -32,7 +32,6 @@ import org.eclipse.hawkbit.ui.common.distributionset.DistributionSetGridHeader;
 import org.eclipse.hawkbit.ui.common.event.EventLayout;
 import org.eclipse.hawkbit.ui.common.event.EventLayoutViewAware;
 import org.eclipse.hawkbit.ui.common.event.EventView;
-import org.eclipse.hawkbit.ui.common.event.EventViewAware;
 import org.eclipse.hawkbit.ui.common.layout.MasterEntityAwareComponent;
 import org.eclipse.hawkbit.ui.common.layout.listener.EntityModifiedListener;
 import org.eclipse.hawkbit.ui.common.layout.listener.EntityModifiedListener.EntityModifiedAwareSupport;
@@ -110,25 +109,25 @@ public class DistributionSetGridLayout extends AbstractDistributionSetGridLayout
         this.distributionSetDetailsHeader = new DistributionSetDetailsHeader(uiDependencies, getDsWindowBuilder(),
                 getDsMetaDataWindowBuilder());
 
-        this.distributionSetDetails = new DistributionSetDetails(uiDependencies, distributionSetManagement, smManagement,
-                distributionSetTypeManagement, distributionSetTagManagement, configManagement, systemSecurityContext,
-                getDsMetaDataWindowBuilder());
+        this.distributionSetDetails = new DistributionSetDetails(uiDependencies, distributionSetManagement,
+                smManagement, distributionSetTypeManagement, distributionSetTagManagement, configManagement,
+                systemSecurityContext, getDsMetaDataWindowBuilder());
         this.distributionSetDetails.setUnassignSmAllowed(true);
         this.distributionSetDetails.addTfqDetailsGrid(targetFilterQueryManagement);
         this.distributionSetDetails.buildDetails();
 
+        final EventLayoutViewAware layoutViewAware = new EventLayoutViewAware(EventLayout.DS_LIST, getEventView());
         addEventListener(new FilterChangedListener<>(uiDependencies.getEventBus(), ProxyDistributionSet.class,
-                new EventViewAware(getEventView()), distributionSetGrid.getFilterSupport()));
-        addEventListener(new SelectionChangedListener<>(uiDependencies.getEventBus(),
-                new EventLayoutViewAware(EventLayout.DS_LIST, getEventView()), getDsEntityAwareComponents()));
-        addEventListener(new SelectGridEntityListener<>(uiDependencies.getEventBus(),
-                new EventLayoutViewAware(EventLayout.DS_LIST, getEventView()),
+                layoutViewAware, distributionSetGrid.getFilterSupport()));
+        addEventListener(new SelectionChangedListener<>(uiDependencies.getEventBus(), layoutViewAware,
+                getDsEntityAwareComponents()));
+        addEventListener(new SelectGridEntityListener<>(uiDependencies.getEventBus(), layoutViewAware,
                 distributionSetGrid.getSelectionSupport()));
         addEventListener(new EntityModifiedListener.Builder<>(uiDependencies.getEventBus(), ProxyDistributionSet.class)
-                .entityModifiedAwareSupports(getDsModifiedAwareSupports()).build());
+                .viewAware(layoutViewAware).entityModifiedAwareSupports(getDsModifiedAwareSupports()).build());
         addEventListener(new EntityModifiedListener.Builder<>(uiDependencies.getEventBus(), ProxyTag.class)
-                .entityModifiedAwareSupports(getTagModifiedAwareSupports()).parentEntityType(ProxyDistributionSet.class)
-                .build());
+                .parentEntityType(ProxyDistributionSet.class).viewAware(layoutViewAware)
+                .entityModifiedAwareSupports(getTagModifiedAwareSupports()).build());
 
         buildLayout(distributionSetGridHeader, distributionSetGrid, distributionSetDetailsHeader,
                 distributionSetDetails);

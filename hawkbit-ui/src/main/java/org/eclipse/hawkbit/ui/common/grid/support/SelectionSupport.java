@@ -230,7 +230,7 @@ public class SelectionSupport<T extends ProxyIdentifiableEntity> {
     }
 
     /**
-     * @return Id of elected entity from the grid
+     * @return Id of selected entity from the grid
      */
     public Optional<Long> getSelectedEntityId() {
         if (isNoSelectionModel() && selectedEntityIdUiStateProvider != null) {
@@ -348,6 +348,16 @@ public class SelectionSupport<T extends ProxyIdentifiableEntity> {
         } else {
             selectFirstRow();
         }
+    }
+
+    /**
+     * Re-fetches and re-selects currently selected entity
+     */
+    public void reselectCurrentEntity() {
+        getSelectedEntityId().ifPresent(selectedEntityId -> {
+            deselectAll();
+            selectEntityById(selectedEntityId);
+        });
     }
 
     @PreDestroy

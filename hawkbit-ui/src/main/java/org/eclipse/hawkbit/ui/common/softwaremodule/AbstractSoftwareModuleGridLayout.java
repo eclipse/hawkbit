@@ -45,7 +45,7 @@ public abstract class AbstractSoftwareModuleGridLayout extends AbstractGridCompo
      * @param eventView
      *            EventView
      */
-    public AbstractSoftwareModuleGridLayout(final CommonUiDependencies uiDependencies,
+    protected AbstractSoftwareModuleGridLayout(final CommonUiDependencies uiDependencies,
             final SoftwareModuleManagement softwareModuleManagement,
             final SoftwareModuleTypeManagement softwareModuleTypeManagement, final EventView eventView) {
 
@@ -117,22 +117,28 @@ public abstract class AbstractSoftwareModuleGridLayout extends AbstractGridCompo
         showDetailsLayout();
     }
 
-    /**
-     * Is called when view is shown to the user
-     */
+    protected void addEventListener(final TopicEventListener listener) {
+        listeners.add(listener);
+    }
+
+    @Override
     public void restoreState() {
         getSoftwareModuleGridHeader().restoreState();
         getSoftwareModuleGrid().restoreState();
     }
 
-    protected void addEventListener(final TopicEventListener listener) {
-        listeners.add(listener);
+    @Override
+    public void onViewEnter() {
+        getSoftwareModuleGrid().getSelectionSupport().reselectCurrentEntity();
     }
 
-    /**
-     * Unsubscribe the event listeners.
-     */
-    public void unsubscribeListener() {
+    @Override
+    public void subscribeListeners() {
+        listeners.forEach(TopicEventListener::subscribe);
+    }
+
+    @Override
+    public void unsubscribeListeners() {
         listeners.forEach(TopicEventListener::unsubscribe);
     }
 

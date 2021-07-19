@@ -8,10 +8,13 @@
  */
 package org.eclipse.hawkbit.ui.management.dstag.filter;
 
+import java.util.Collection;
 import java.util.Collections;
+import java.util.stream.Collectors;
 
 import org.eclipse.hawkbit.repository.DistributionSetManagement;
 import org.eclipse.hawkbit.repository.DistributionSetTagManagement;
+import org.eclipse.hawkbit.repository.Identifiable;
 import org.eclipse.hawkbit.ui.common.CommonUiDependencies;
 import org.eclipse.hawkbit.ui.common.data.mappers.TagToProxyTagMapper;
 import org.eclipse.hawkbit.ui.common.data.providers.DistributionSetTagDataProvider;
@@ -123,5 +126,10 @@ public class DistributionTagButtons extends AbstractTagFilterButtons {
     @Override
     protected Window getUpdateWindow(final ProxyTag clickedFilter) {
         return dsTagWindowBuilder.getWindowForUpdate(clickedFilter);
+    }
+
+    @Override
+    protected Collection<Long> filterExistingTagIds(final Collection<Long> tagIds) {
+        return distributionSetTagManagement.get(tagIds).stream().map(Identifiable::getId).collect(Collectors.toSet());
     }
 }

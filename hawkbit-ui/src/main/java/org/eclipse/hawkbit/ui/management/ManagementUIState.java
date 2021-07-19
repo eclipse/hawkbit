@@ -10,12 +10,16 @@ package org.eclipse.hawkbit.ui.management;
 
 import java.io.Serializable;
 
+import javax.annotation.PreDestroy;
+
+import org.eclipse.hawkbit.ui.common.layout.listener.BulkUploadChangedListener;
 import org.eclipse.hawkbit.ui.common.state.TagFilterLayoutUiState;
 import org.eclipse.hawkbit.ui.management.actionhistory.ActionHistoryGridLayoutUiState;
 import org.eclipse.hawkbit.ui.management.bulkupload.TargetBulkUploadUiState;
 import org.eclipse.hawkbit.ui.management.dstable.DistributionGridLayoutUiState;
 import org.eclipse.hawkbit.ui.management.targettable.TargetGridLayoutUiState;
 import org.eclipse.hawkbit.ui.management.targettag.filter.TargetTagFilterLayoutUiState;
+import org.vaadin.spring.events.EventBus.SessionEventBus;
 
 import com.vaadin.spring.annotation.SpringComponent;
 import com.vaadin.spring.annotation.VaadinSessionScope;
@@ -28,6 +32,8 @@ import com.vaadin.spring.annotation.VaadinSessionScope;
 public class ManagementUIState implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    private final transient BulkUploadChangedListener bulkUploadListener;
+
     private final TargetTagFilterLayoutUiState targetTagFilterLayoutUiState;
     private final TargetGridLayoutUiState targetGridLayoutUiState;
     private final TargetBulkUploadUiState targetBulkUploadUiState;
@@ -35,7 +41,7 @@ public class ManagementUIState implements Serializable {
     private final TagFilterLayoutUiState distributionTagLayoutUiState;
     private final ActionHistoryGridLayoutUiState actionHistoryGridLayoutUiState;
 
-    ManagementUIState() {
+    ManagementUIState(final SessionEventBus sessionEventBus) {
         this.targetTagFilterLayoutUiState = new TargetTagFilterLayoutUiState();
         this.targetGridLayoutUiState = new TargetGridLayoutUiState();
         this.targetBulkUploadUiState = new TargetBulkUploadUiState();
@@ -43,11 +49,15 @@ public class ManagementUIState implements Serializable {
         this.distributionTagLayoutUiState = new TagFilterLayoutUiState();
         this.actionHistoryGridLayoutUiState = new ActionHistoryGridLayoutUiState();
 
+        this.bulkUploadListener = new BulkUploadChangedListener(sessionEventBus,
+                targetBulkUploadUiState::onBulkUploadChanged);
+
         init();
     }
 
     private void init() {
         distributionTagLayoutUiState.setHidden(true);
+        bulkUploadListener.subscribe();
     }
 
     /**
@@ -90,5 +100,10 @@ public class ManagementUIState implements Serializable {
      */
     public TargetBulkUploadUiState getTargetBulkUploadUiState() {
         return targetBulkUploadUiState;
+    }
+
+    @PreDestroy
+    public void destroy() {
+        bulkUploadListener.unsubscribe();
     }
 }

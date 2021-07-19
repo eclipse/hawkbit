@@ -8,6 +8,7 @@
  */
 package org.eclipse.hawkbit.ui.common.filterlayout;
 
+import org.eclipse.hawkbit.ui.common.EventListenersAwareLayout;
 import org.eclipse.hawkbit.ui.common.grid.header.AbstractGridHeader;
 import org.eclipse.hawkbit.ui.utils.SPUIDefinitions;
 
@@ -19,7 +20,7 @@ import com.vaadin.ui.VerticalLayout;
 /**
  * Parent class for filter button layout.
  */
-public abstract class AbstractFilterLayout extends VerticalLayout {
+public abstract class AbstractFilterLayout extends VerticalLayout implements EventListenersAwareLayout {
     private static final long serialVersionUID = 1L;
 
     protected void buildLayout() {

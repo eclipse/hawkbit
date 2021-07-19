@@ -19,18 +19,6 @@ import org.eclipse.hawkbit.ui.common.data.proxies.ProxyRollout;
  */
 public class RolloutToProxyRolloutMapper extends AbstractNamedEntityToProxyNamedEntityMapper<ProxyRollout, Rollout> {
 
-    /**
-     * Maps the rollout to Proxy rollout
-     *
-     * @param rollout
-     *            Rollout
-     *
-     * @return ProxyRollout
-     */
-    public static ProxyRollout mapRollout(final Rollout rollout) {
-        return new RolloutToProxyRolloutMapper().map(rollout);
-    }
-
     @Override
     public ProxyRollout map(final Rollout rollout) {
         final ProxyRollout proxyRollout = new ProxyRollout();

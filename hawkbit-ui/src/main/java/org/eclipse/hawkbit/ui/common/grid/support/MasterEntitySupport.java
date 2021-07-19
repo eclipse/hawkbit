@@ -19,7 +19,7 @@ import org.eclipse.hawkbit.ui.common.layout.MasterEntityAwareComponent;
  * Filter support in Master entity
  *
  * @param <M>
- *          Generic type of ProxyIdentifiableEntity
+ *            Generic type of master entity
  */
 public class MasterEntitySupport<M extends ProxyIdentifiableEntity> implements MasterEntityAwareComponent<M> {
     private final FilterSupport<?, ?> filterSupport;
@@ -31,7 +31,7 @@ public class MasterEntitySupport<M extends ProxyIdentifiableEntity> implements M
      * Constructor for MasterEntitySupport
      *
      * @param filterSupport
-     *          Filter support
+     *            Filter support
      */
     public MasterEntitySupport(final FilterSupport<?, ?> filterSupport) {
         this(filterSupport, null);
@@ -41,9 +41,9 @@ public class MasterEntitySupport<M extends ProxyIdentifiableEntity> implements M
      * Constructor for MasterEntitySupport
      *
      * @param filterSupport
-     *          Filter support
+     *            Filter support
      * @param masterEntityToFilterMapper
-     *          Master entity to filter mapper
+     *            Master entity to filter mapper
      */
     public MasterEntitySupport(final FilterSupport<?, ?> filterSupport,
             final Function<M, ?> masterEntityToFilterMapper) {
@@ -57,16 +57,18 @@ public class MasterEntitySupport<M extends ProxyIdentifiableEntity> implements M
             return;
         }
 
-        final Long masterEntityId = masterEntity != null ? masterEntity.getId() : null;
-        masterId = masterEntityId;
+        filterSupport.updateFilter(FilterType.MASTER, getMasterEntityFilter(masterEntity));
 
-        if (masterEntity != null) {
-            filterSupport.updateFilter(FilterType.MASTER,
-                    masterEntityToFilterMapper != null ? masterEntityToFilterMapper.apply(masterEntity)
-                            : masterEntityId);
-        } else {
-            filterSupport.updateFilter(FilterType.MASTER, null);
+        masterId = masterEntity != null ? masterEntity.getId() : null;
+    }
+
+    private Object getMasterEntityFilter(final M masterEntity) {
+        if (masterEntity == null) {
+            return null;
         }
+
+        return masterEntityToFilterMapper != null ? masterEntityToFilterMapper.apply(masterEntity)
+                : masterEntity.getId();
     }
 
     /**

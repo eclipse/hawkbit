@@ -27,6 +27,7 @@ import org.vaadin.spring.events.annotation.EventBusListenerMethod;
 public class FilterChangedListener<T extends ProxyIdentifiableEntity> extends ViewAwareListener {
     private final Class<T> entityType;
     private final FilterSupport<T, ?> filterSupport;
+    private final Runnable updateFilterCountInfo;
 
     /**
      * Constructor for FilterChangedListener
@@ -42,10 +43,30 @@ public class FilterChangedListener<T extends ProxyIdentifiableEntity> extends Vi
      */
     public FilterChangedListener(final UIEventBus eventBus, final Class<T> entityType, final EventViewAware viewAware,
             final FilterSupport<T, ?> filterSupport) {
+        this(eventBus, entityType, viewAware, filterSupport, null);
+    }
+
+    /**
+     * Constructor for FilterChangedListener
+     *
+     * @param eventBus
+     *            UIEventBus
+     * @param entityType
+     *            Generic type entity
+     * @param viewAware
+     *            EventViewAware
+     * @param filterSupport
+     *            Generic type filter support
+     * @param updateFilterCountInfo
+     *            Callback to update entities count info on filter change
+     */
+    public FilterChangedListener(final UIEventBus eventBus, final Class<T> entityType, final EventViewAware viewAware,
+            final FilterSupport<T, ?> filterSupport, final Runnable updateFilterCountInfo) {
         super(eventBus, EventTopics.FILTER_CHANGED, viewAware);
 
         this.entityType = entityType;
         this.filterSupport = filterSupport;
+        this.updateFilterCountInfo = updateFilterCountInfo;
     }
 
     @EventBusListenerMethod(scope = EventScope.UI)
@@ -58,6 +79,9 @@ public class FilterChangedListener<T extends ProxyIdentifiableEntity> extends Vi
 
         if (filterSupport.isFilterTypeSupported(filterType)) {
             filterSupport.updateFilter(filterType, eventPayload.getFilterValue());
+            if (updateFilterCountInfo != null) {
+                updateFilterCountInfo.run();
+            }
         }
     }
 

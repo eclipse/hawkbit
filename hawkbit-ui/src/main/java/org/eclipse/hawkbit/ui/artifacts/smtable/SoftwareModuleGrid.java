@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -110,11 +111,26 @@ public class SoftwareModuleGrid extends AbstractGrid<ProxySoftwareModule, SwFilt
         setFilterSupport(new FilterSupport<>(
                 new SoftwareModuleDataProvider(softwareModuleManagement,
                         new AssignedSoftwareModuleToProxyMapper(softwareModuleToProxyMapper)),
-                SwFilterParams::new, getSelectionSupport()::deselectAll));
+                SwFilterParams::new, this::afterFilterRefresh));
         initFilterMappings();
         getFilterSupport().setFilter(new SwFilterParams());
 
         this.numberOfArtifactUploadsForSm = new HashMap<>();
+    }
+
+    private void afterFilterRefresh() {
+        // keep selection on master distribution set change as it does not
+        // filter out any software module entries, only sorts them
+        if (masterFilterHasNotChanged()) {
+            getSelectionSupport().deselectAll();
+        }
+    }
+
+    private boolean masterFilterHasNotChanged() {
+        final Long filterDsId = getFilter().map(SwFilterParams::getLastSelectedDistributionId).orElse(null);
+        final Long masterDsId = getMasterEntitySupport().getMasterId();
+
+        return Objects.equals(filterDsId, masterDsId);
     }
 
     private void initFilterMappings() {

@@ -15,6 +15,7 @@ import javax.annotation.PostConstruct;
 
 import org.eclipse.hawkbit.ui.AbstractHawkbitUI;
 import org.eclipse.hawkbit.ui.UiProperties;
+import org.eclipse.hawkbit.ui.common.ViewNameAware;
 import org.eclipse.hawkbit.ui.common.data.proxies.ProxySystemConfigWindow;
 import org.eclipse.hawkbit.ui.components.SPUIComponentProvider;
 import org.eclipse.hawkbit.ui.decorators.SPUIButtonStyleNoBorder;
@@ -44,7 +45,8 @@ import com.vaadin.ui.VerticalLayout;
  */
 @ViewScope
 @SpringView(name = TenantConfigurationDashboardView.VIEW_NAME, ui = AbstractHawkbitUI.class)
-public class TenantConfigurationDashboardView extends CustomComponent implements View, ConfigurationItemChangeListener {
+public class TenantConfigurationDashboardView extends CustomComponent
+        implements View, ViewNameAware, ConfigurationItemChangeListener {
     private static final long serialVersionUID = 1L;
 
     public static final String VIEW_NAME = "spSystemConfig";
@@ -163,4 +165,8 @@ public class TenantConfigurationDashboardView extends CustomComponent implements
         // This view is constructed in the init() method()
     }
 
+    @Override
+    public String getViewName() {
+        return TenantConfigurationDashboardView.VIEW_NAME;
+    }
 }

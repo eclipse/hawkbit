@@ -50,19 +50,21 @@ public class RolloutGroupGridLayout extends AbstractGridComponentLayout {
      * @param rolloutManagementUIState
      *            UIState
      */
-    public RolloutGroupGridLayout(final CommonUiDependencies uiDependencies, final RolloutGroupManagement rolloutGroupManagement,
+    public RolloutGroupGridLayout(final CommonUiDependencies uiDependencies,
+            final RolloutGroupManagement rolloutGroupManagement,
             final RolloutManagementUIState rolloutManagementUIState) {
         this.rolloutGroupsListHeader = new RolloutGroupGridHeader(uiDependencies, rolloutManagementUIState);
-        this.rolloutGroupListGrid = new RolloutGroupGrid(uiDependencies, rolloutGroupManagement, rolloutManagementUIState);
+        this.rolloutGroupListGrid = new RolloutGroupGrid(uiDependencies, rolloutGroupManagement,
+                rolloutManagementUIState);
 
         final EventLayoutViewAware masterLayoutView = new EventLayoutViewAware(EventLayout.ROLLOUT_LIST,
                 EventView.ROLLOUT);
-
-        this.masterEntityChangedListener = new SelectionChangedListener<>(uiDependencies.getEventBus(), masterLayoutView,
-                getMasterEntityAwareComponents());
+        this.masterEntityChangedListener = new SelectionChangedListener<>(uiDependencies.getEventBus(),
+                masterLayoutView, getMasterEntityAwareComponents());
         this.entityModifiedListener = new EntityModifiedListener.Builder<>(uiDependencies.getEventBus(),
-                ProxyRolloutGroup.class).entityModifiedAwareSupports(getEntityModifiedAwareSupports())
-                        .parentEntityType(ProxyRollout.class).parentEntityIdProvider(this::getMasterEntityId).build();
+                ProxyRolloutGroup.class).parentEntityType(ProxyRollout.class)
+                        .parentEntityIdProvider(this::getMasterEntityId).viewAware(masterLayoutView)
+                        .entityModifiedAwareSupports(getEntityModifiedAwareSupports()).build();
 
         buildLayout(rolloutGroupsListHeader, rolloutGroupListGrid);
     }
@@ -83,18 +85,20 @@ public class RolloutGroupGridLayout extends AbstractGridComponentLayout {
         return Optional.ofNullable(rolloutGroupListGrid.getMasterEntitySupport().getMasterId());
     }
 
-    /**
-     * Restore the rollout group grid list state
-     */
+    @Override
     public void restoreState() {
         rolloutGroupsListHeader.restoreState();
         rolloutGroupListGrid.restoreState();
     }
 
-    /**
-     * Unsubscribe the event listener
-     */
-    public void unsubscribeListener() {
+    @Override
+    public void subscribeListeners() {
+        masterEntityChangedListener.subscribe();
+        entityModifiedListener.subscribe();
+    }
+
+    @Override
+    public void unsubscribeListeners() {
         masterEntityChangedListener.unsubscribe();
         entityModifiedListener.unsubscribe();
     }
