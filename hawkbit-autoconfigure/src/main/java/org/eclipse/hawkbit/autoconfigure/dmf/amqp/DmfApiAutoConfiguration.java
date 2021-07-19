@@ -27,7 +27,7 @@ public class DmfApiAutoConfiguration {
 
     /**
      * Create default error handler bean.
-     * 
+     *
      * @return the default error handler bean
      */
     @Bean
@@ -35,5 +35,4 @@ public class DmfApiAutoConfiguration {
     public ErrorHandler errorHandler() {
         return new ConditionalRejectingErrorHandler();
     }
-
 }
