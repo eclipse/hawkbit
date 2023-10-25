@@ -164,8 +164,8 @@ class JwtAuthoritiesOidcUserService extends OidcUserService {
 
         final String userNameAttributeName = clientRegistration.getProviderDetails().getUserInfoEndpoint()
                 .getUserNameAttributeName();
-        OidcUser oidcUser;
-        if (StringUtils.hasText(userNameAttributeName)) {
+        final OidcUser oidcUser;
+        if (StringUtils.hasText(userNameAttributeName) && user.getClaims().containsKey(userNameAttributeName)) {
             oidcUser = new DefaultOidcUser(authorities, userRequest.getIdToken(), user.getUserInfo(),
                     userNameAttributeName);
         } else {
@@ -339,9 +339,18 @@ class OidcBearerTokenAuthenticationFilter implements UserAuthenticationFilter, F
                 return;
             }
 
-            final DefaultOidcUser user = new DefaultOidcUser(authorities, idToken, userInfo);
+            final String userNameAttributeName = clientRegistration.getProviderDetails().getUserInfoEndpoint()
+                    .getUserNameAttributeName();
 
-            final OAuth2AuthenticationToken oAuth2AuthenticationToken = new OAuth2AuthenticationToken(user, authorities,
+            final DefaultOidcUser oidcUser;            
+            if (StringUtils.hasText(userNameAttributeName) && jwt.getClaims().containsKey(userNameAttributeName)) {
+                oidcUser = new DefaultOidcUser(authorities, idToken, userInfo, userNameAttributeName);
+
+            } else {
+                oidcUser = new DefaultOidcUser(authorities, idToken, userInfo);
+            }
+
+            final OAuth2AuthenticationToken oAuth2AuthenticationToken = new OAuth2AuthenticationToken(oidcUser, authorities,
                     clientRegistration.getRegistrationId());
 
             oAuth2AuthenticationToken.setDetails(new TenantAwareAuthenticationDetails(defaultTenant, false));

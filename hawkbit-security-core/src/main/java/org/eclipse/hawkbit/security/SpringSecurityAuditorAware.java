@@ -41,7 +41,7 @@ public class SpringSecurityAuditorAware implements AuditorAware<String> {
             return ((UserDetails) authentication.getPrincipal()).getUsername();
         }
         if (authentication.getPrincipal() instanceof OidcUser) {
-            return ((OidcUser) authentication.getPrincipal()).getPreferredUsername();
+            return ((OidcUser) authentication.getPrincipal()).getName();
         }
         return authentication.getPrincipal().toString();
     }
