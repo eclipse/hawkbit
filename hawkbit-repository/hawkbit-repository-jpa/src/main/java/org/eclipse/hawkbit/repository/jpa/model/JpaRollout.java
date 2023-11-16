@@ -140,6 +140,10 @@ public class JpaRollout extends AbstractJpaNamedEntity implements Rollout, Event
     @Max(Action.WEIGHT_MAX)
     private Integer weight;
 
+    @Column(name = "retry_count")
+    @Min(Action.WEIGHT_MIN)
+    private Integer retryCount;
+
     @Transient
     private transient TotalTargetCountStatus totalTargetCountStatus;
 
@@ -216,6 +220,15 @@ public class JpaRollout extends AbstractJpaNamedEntity implements Rollout, Event
     @Override
     public Optional<Integer> getWeight() {
         return Optional.ofNullable(weight);
+    }
+
+    @Override
+    public Integer getRetryCount() {
+        return retryCount;
+    }
+
+    public void setRetryCount(final Integer retryCount) {
+        this.retryCount = retryCount;
     }
 
     public void setWeight(final Integer weight) {

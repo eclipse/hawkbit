@@ -38,8 +38,8 @@ public interface Rollout extends NamedEntity {
     int APPROVAL_REMARK_MAX_SIZE = 255;
 
     /**
-     * @return <code>true</code> if the rollout is deleted and only kept for
-     *         history purposes.
+     * @return <code>true</code> if the rollout is deleted and only kept for history
+     *         purposes.
      */
     boolean isDeleted();
 
@@ -49,8 +49,7 @@ public interface Rollout extends NamedEntity {
     DistributionSet getDistributionSet();
 
     /**
-     * @return rsql query that identifies the targets that are part of this
-     *         rollout.
+     * @return rsql query that identifies the targets that are part of this rollout.
      */
     String getTargetFilterQuery();
 
@@ -65,15 +64,15 @@ public interface Rollout extends NamedEntity {
     ActionType getActionType();
 
     /**
-     * @return time in {@link TimeUnit#MILLISECONDS} after which
-     *         {@link #isForced()} switches to <code>true</code> in case of
+     * @return time in {@link TimeUnit#MILLISECONDS} after which {@link #isForced()}
+     *         switches to <code>true</code> in case of
      *         {@link ActionType#TIMEFORCED}.
      */
     long getForcedTime();
 
     /**
-     * @return Timestamp when the rollout should be started automatically. Can
-     *         be null.
+     * @return Timestamp when the rollout should be started automatically. Can be
+     *         null.
      */
     Long getStartAt();
 
@@ -88,8 +87,7 @@ public interface Rollout extends NamedEntity {
     int getRolloutGroupsCreated();
 
     /**
-     * @return all states with the respective target count in that
-     *         {@link Status}.
+     * @return all states with the respective target count in that {@link Status}.
      */
     TotalTargetCountStatus getTotalTargetCountStatus();
 
@@ -107,6 +105,11 @@ public interface Rollout extends NamedEntity {
      * @return the priority of {@link Rollout}.
      */
     Optional<Integer> getWeight();
+
+    /**
+     * @return the current retry count of a rollout. Could be null in case of no retries.
+     */
+    Integer getRetryCount();
 
     /**
      *
@@ -171,29 +174,28 @@ public interface Rollout extends NamedEntity {
         DELETING,
 
         /**
-         * Rollout has been deleted. This state is only set in case of a
-         * soft-deletion of the rollout which keeps references, in case of an
-         * hard-deletion of a rollout the rollout-entry itself is deleted.
+         * Rollout has been deleted. This state is only set in case of a soft-deletion
+         * of the rollout which keeps references, in case of an hard-deletion of a
+         * rollout the rollout-entry itself is deleted.
          */
         DELETED,
 
         /**
-         * Rollout could not be created due to errors, might be a database
-         * problem during asynchronous creating.
-         *
-         * @deprecated legacy status is not used anymore
+         * Rollout could not be created due to errors, might be a database problem
+         * during asynchronous creating.
          */
-        @Deprecated
         ERROR_CREATING,
 
         /**
-         * Rollout could not be started due to errors, might be database problem
-         * during asynchronous starting.
-         *
-         * @deprecated legacy status is not used anymore
+         * Rollout could not be started due to errors, might be database problem during
+         * asynchronous starting.
          */
-        @Deprecated
-        ERROR_STARTING
+        ERROR_STARTING,
+
+        /**
+         * Rollout could not be deleted due to errors, might be database problem.
+         */
+        ERROR_DELETING
     }
 
     /**

@@ -1,0 +1,1 @@
+ALTER TABLE sp_rollout ADD retry_count INT;

@@ -694,11 +694,12 @@ public class RepositoryApplicationConfiguration extends JpaBaseConfiguration {
             final DeploymentManagement deploymentManagement, final TargetManagement targetManagement,
             final EventPublisherHolder eventPublisherHolder, final PlatformTransactionManager txManager,
             final RolloutApprovalStrategy rolloutApprovalStrategy,
-            final RolloutGroupEvaluationManager evaluationManager, final RolloutManagement rolloutManagement) {
+            final RolloutGroupEvaluationManager evaluationManager, final RolloutManagement rolloutManagement,
+            final RepositoryProperties repositoryProperties) {
         return new JpaRolloutExecutor(rolloutTargetGroupRepository, entityManager, rolloutRepository, actionRepository,
                 rolloutGroupRepository, afterCommit, tenantAware, rolloutGroupManagement, quotaManagement,
                 deploymentManagement, targetManagement, eventPublisherHolder, txManager, rolloutApprovalStrategy,
-                evaluationManager, rolloutManagement);
+                evaluationManager, rolloutManagement, repositoryProperties);
     }
 
     @Bean

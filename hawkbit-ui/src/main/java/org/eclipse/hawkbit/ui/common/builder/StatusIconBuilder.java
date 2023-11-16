@@ -128,6 +128,9 @@ public final class StatusIconBuilder {
             addMapping(RolloutStatus.CREATING, null, SPUIStyleDefinitions.STATUS_SPINNER_GREY);
             addMapping(RolloutStatus.STARTING, null, SPUIStyleDefinitions.STATUS_SPINNER_BLUE);
             addMapping(RolloutStatus.DELETING, null, SPUIStyleDefinitions.STATUS_SPINNER_RED);
+            addMapping(RolloutStatus.ERROR_CREATING, VaadinIcons.EXCLAMATION_CIRCLE, SPUIStyleDefinitions.STATUS_ICON_RED);
+            addMapping(RolloutStatus.ERROR_DELETING, VaadinIcons.EXCLAMATION_CIRCLE, SPUIStyleDefinitions.STATUS_ICON_RED);
+            addMapping(RolloutStatus.ERROR_STARTING, VaadinIcons.EXCLAMATION_CIRCLE, SPUIStyleDefinitions.STATUS_ICON_RED);
         }
     }
 
@@ -208,7 +211,7 @@ public final class StatusIconBuilder {
                     .get(rolloutManagementUIState.getSelectedRolloutGroupId());
             final Optional<ProxyFontIcon> optionalIcon = getIcon(entity);
 
-            ProxyFontIcon icon;
+            final ProxyFontIcon icon;
             if (optionalIcon.isPresent()) {
                 icon = getFontIconFromStatusMap(optionalIcon.get(), getEntityStatus.apply(entity), group.orElse(null));
             } else {
@@ -488,8 +491,8 @@ public final class StatusIconBuilder {
             }
 
             final long currentTimeMillis = System.currentTimeMillis();
-            String style;
-            String description;
+            final String style;
+            final String description;
             if (action.isHitAutoForceTime(currentTimeMillis)) {
                 style = SPUIStyleDefinitions.STATUS_ICON_GREEN;
                 final String duration = SPDateTimeUtil.getDurationFormattedString(action.getForcedTime(),

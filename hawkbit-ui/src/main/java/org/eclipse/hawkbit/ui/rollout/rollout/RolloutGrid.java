@@ -17,16 +17,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import com.cronutils.utils.StringUtils;
-import com.google.common.base.Predicates;
-import com.vaadin.data.ValueProvider;
-import com.vaadin.icons.VaadinIcons;
-import com.vaadin.shared.ui.ContentMode;
-import com.vaadin.ui.Button;
-import com.vaadin.ui.Label;
-import com.vaadin.ui.UI;
-import com.vaadin.ui.Window;
-import com.vaadin.ui.renderers.HtmlRenderer;
 import org.eclipse.hawkbit.repository.RolloutGroupManagement;
 import org.eclipse.hawkbit.repository.RolloutManagement;
 import org.eclipse.hawkbit.repository.TenantConfigurationManagement;
@@ -70,6 +60,17 @@ import org.eclipse.hawkbit.ui.utils.UIMessageIdProvider;
 import org.eclipse.hawkbit.ui.utils.UINotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.cronutils.utils.StringUtils;
+import com.google.common.base.Predicates;
+import com.vaadin.data.ValueProvider;
+import com.vaadin.icons.VaadinIcons;
+import com.vaadin.shared.ui.ContentMode;
+import com.vaadin.ui.Button;
+import com.vaadin.ui.Label;
+import com.vaadin.ui.UI;
+import com.vaadin.ui.Window;
+import com.vaadin.ui.renderers.HtmlRenderer;
 
 /**
  * Rollout list grid component.
@@ -216,7 +217,8 @@ public class RolloutGrid extends AbstractGrid<ProxyRollout, String> {
     private static boolean isDeletionAllowed(final RolloutStatus status) {
         final List<RolloutStatus> statesThatAllowDeletion = Arrays.asList(RolloutStatus.CREATING, RolloutStatus.PAUSED,
                 RolloutStatus.READY, RolloutStatus.RUNNING, RolloutStatus.STARTING, RolloutStatus.STOPPED,
-                RolloutStatus.FINISHED, RolloutStatus.WAITING_FOR_APPROVAL, RolloutStatus.APPROVAL_DENIED);
+                RolloutStatus.FINISHED, RolloutStatus.WAITING_FOR_APPROVAL, RolloutStatus.APPROVAL_DENIED,
+                RolloutStatus.ERROR_CREATING, RolloutStatus.ERROR_STARTING, RolloutStatus.ERROR_DELETING);
         return statesThatAllowDeletion.contains(status);
     }
 
@@ -458,8 +460,8 @@ public class RolloutGrid extends AbstractGrid<ProxyRollout, String> {
     }
 
     /**
-     * Used to show the Rollouts List View in case the currently selected
-     * Rollout was deleted.
+     * Used to show the Rollouts List View in case the currently selected Rollout
+     * was deleted.
      *
      * @param deletedSelectedRolloutId
      *            id of the deleted Rollout that is currently selected
