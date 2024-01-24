@@ -69,6 +69,11 @@ class FileStreamingUtilTest {
         public InputStream getFileInputStream() {
             return new ByteArrayInputStream(CONTENT_BYTES);
         }
+
+        @Override
+        public InputStream getFileInputStream(long start, long end) {
+            return new ByteArrayInputStream(CONTENT_BYTES, (int) start, (int) (end - start + 1));
+        }
     };
 
     @Test

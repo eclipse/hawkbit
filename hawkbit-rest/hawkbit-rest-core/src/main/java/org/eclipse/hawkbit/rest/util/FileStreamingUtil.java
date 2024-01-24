@@ -285,8 +285,8 @@ public final class FileStreamingUtil {
             final ServletOutputStream to = response.getOutputStream();
 
             for (final ByteRange r : ranges) {
-                try (final InputStream from = artifact.getFileInputStream()) {
 
+                try (final InputStream from = artifact.getFileInputStream(r.getStart(), r.getEnd())) {
                     // Add multipart boundary and header fields for every range.
                     to.println();
                     to.println("--" + ByteRange.MULTIPART_BOUNDARY);
@@ -316,7 +316,7 @@ public final class FileStreamingUtil {
         response.setContentLengthLong(r.getLength());
         response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
 
-        try (final InputStream from = artifact.getFileInputStream()) {
+        try (final InputStream from = artifact.getFileInputStream(r.getStart(), r.getEnd())) {
             final ServletOutputStream to = response.getOutputStream();
             copyStreams(from, to, progressListener, r.getStart(), r.getLength(), filename);
         } catch (final IOException e) {
@@ -339,8 +339,6 @@ public final class FileStreamingUtil {
         final byte[] buf = new byte[BUFFER_SIZE];
         long total = 0;
         int progressPercent = 1;
-
-        ByteStreams.skipFully(from, start);
 
         long toRead = length;
         boolean toContinue = true;

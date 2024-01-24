@@ -43,4 +43,13 @@ public interface DbArtifact {
      * @return {@link InputStream} to read from artifact.
      */
     InputStream getFileInputStream();
+
+    /**
+     * Creates an {@link InputStream} on a single range of this artifact.
+     * The caller has to take care of closing the stream.
+     * Repeatable calls open a new {@link InputStream}.
+     *
+     * @return {@link InputStream} to read from artifact.
+     */
+    InputStream getFileInputStream(long start, long end);
 }

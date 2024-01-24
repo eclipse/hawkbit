@@ -11,12 +11,17 @@ package org.eclipse.hawkbit.artifact.repository;
 
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.RandomAccessFile;
+import java.nio.channels.Channels;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
 
 import jakarta.validation.constraints.NotNull;
+
+import com.google.common.io.ByteStreams;
 
 import org.eclipse.hawkbit.artifact.repository.model.AbstractDbArtifact;
 import org.eclipse.hawkbit.artifact.repository.model.DbArtifactHash;
@@ -44,6 +49,21 @@ public class ArtifactFilesystem extends AbstractDbArtifact {
         try {
             return new BufferedInputStream(new FileInputStream(file));
         } catch (final FileNotFoundException e) {
+            throw new ArtifactFileNotFoundException(e);
+        }
+    }
+
+    @Override
+    // suppress warning, this InputStream needs to be closed by the caller, this
+    // cannot be closed in this method
+    @SuppressWarnings("squid:S2095")
+    public InputStream getFileInputStream(long start, long end) {
+        try {
+            var f = new RandomAccessFile(file, "r");
+            var ch = f.getChannel();
+            ch.position(start);
+            return ByteStreams.limit(Channels.newInputStream(ch), end - start + 1);
+        } catch (final IOException e) {
             throw new ArtifactFileNotFoundException(e);
         }
     }

@@ -63,4 +63,9 @@ public class EncryptionAwareDbArtifact implements DbArtifact {
     public InputStream getFileInputStream() {
         return decryptionFunction.apply(encryptedDbArtifact.getFileInputStream());
     }
+
+    @Override
+    public InputStream getFileInputStream(long start, long end) {
+        return decryptionFunction.apply(encryptedDbArtifact.getFileInputStream(start, end));
+    }
 }
