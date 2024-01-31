@@ -44,11 +44,14 @@ public class BusProtoStuffMessageConverter extends AbstractMessageConverter {
      */
     private static final byte EVENT_TYPE_LENGTH = 2;
 
+    private final EventTypeProvider eventTypeProvider;
+
     /**
      * Constructor.
      */
-    public BusProtoStuffMessageConverter() {
+    public BusProtoStuffMessageConverter(final EventTypeProvider eventTypeProvider) {
         super(APPLICATION_BINARY_PROTOSTUFF);
+        this.eventTypeProvider = eventTypeProvider;
     }
 
     @Override
@@ -83,8 +86,8 @@ public class BusProtoStuffMessageConverter extends AbstractMessageConverter {
         return mergeClassHeaderAndContent(clazzHeader, writeContent);
     }
 
-    private static Object readContent(final EventType eventType, final byte[] content) {
-        final Class<?> targetClass = eventType.getTargetClass();
+    private Object readContent(final EventType eventType, final byte[] content) {
+        final Class<?> targetClass = eventTypeProvider.getTargetClass(eventType);
         if (targetClass == null) {
             LOG.error("Cannot read clazz header for given EventType value {}, missing mapping", eventType.getValue());
             throw new MessageConversionException("Missing mapping of EventType for value " + eventType.getValue());
@@ -130,16 +133,16 @@ public class BusProtoStuffMessageConverter extends AbstractMessageConverter {
         return ProtobufIOUtil.toByteArray(payload, schema, buffer);
     }
 
-    private static byte[] writeClassHeader(final Class<?> clazz) {
-        final EventType clazzEventType = EventType.from(clazz);
+    private byte[] writeClassHeader(final Class<?> clazz) {
+        final EventType clazzEventType = eventTypeProvider.from(clazz);
         if (clazzEventType == null) {
             LOG.error("There is no mapping to EventType for the given class {}", clazz);
             throw new MessageConversionException("Missing EventType for given class : " + clazz);
         }
         @SuppressWarnings("unchecked")
-        final Schema<Object> schema = (Schema<Object>) RuntimeSchema
-                .getSchema((Class<?>) EventType.class);
+        final Schema<Object> schema = (Schema<Object>) RuntimeSchema.getSchema((Class<?>) EventType.class);
         final LinkedBuffer buffer = LinkedBuffer.allocate();
         return ProtobufIOUtil.toByteArray(clazzEventType, schema, buffer);
     }
+
 }

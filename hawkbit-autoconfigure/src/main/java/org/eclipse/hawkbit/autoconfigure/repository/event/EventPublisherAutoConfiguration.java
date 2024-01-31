@@ -12,6 +12,7 @@ package org.eclipse.hawkbit.autoconfigure.repository.event;
 import java.util.concurrent.Executor;
 
 import org.eclipse.hawkbit.event.BusProtoStuffMessageConverter;
+import org.eclipse.hawkbit.event.EventTypeProvider;
 import org.eclipse.hawkbit.repository.event.ApplicationEventFilter;
 import org.eclipse.hawkbit.repository.event.remote.RemoteTenantAwareEvent;
 import org.eclipse.hawkbit.repository.model.helper.EventPublisherHolder;
@@ -48,8 +49,8 @@ import io.protostuff.Schema;
 @EnableConfigurationProperties(BusProperties.class)
 public class EventPublisherAutoConfiguration {
     /**
-     * Server internal event publisher that allows parallel event processing if
-     * the event listener is marked as so.
+     * Server internal event publisher that allows parallel event processing if the
+     * event listener is marked as so.
      *
      * @return publisher bean
      */
@@ -63,8 +64,7 @@ public class EventPublisherAutoConfiguration {
     }
 
     /**
-     * Bean for creating a singleton instance of the
-     * {@link EventPublisherHolder}
+     * Bean for creating a singleton instance of the {@link EventPublisherHolder}
      * 
      * @return the singleton instance of the {@link EventPublisherHolder}
      */
@@ -105,8 +105,7 @@ public class EventPublisherAutoConfiguration {
         }
 
         /**
-         * Was overridden that not every event has to run within a own
-         * tenantAware.
+         * Was overridden that not every event has to run within a own tenantAware.
          */
         @Override
         public void multicastEvent(final ApplicationEvent event, final ResolvableType eventType) {
@@ -141,10 +140,15 @@ public class EventPublisherAutoConfiguration {
          * @return the protostuff io message converter
          */
         @Bean
-        public MessageConverter busProtoBufConverter() {
-            return new BusProtoStuffMessageConverter();
+        public MessageConverter busProtoBufConverter(final EventTypeProvider eventTypeProvider) {
+            return new BusProtoStuffMessageConverter(eventTypeProvider);
         }
 
+        @Bean
+        @ConditionalOnMissingBean
+        public EventTypeProvider eventTypeProvider() {
+            return new EventTypeProvider();
+        }
     }
 
 }

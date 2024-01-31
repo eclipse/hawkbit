@@ -33,7 +33,7 @@ import io.qameta.allure.Description;
 @ExtendWith(MockitoExtension.class)
 public class BusProtoStuffMessageConverterTest {
 
-    private final BusProtoStuffMessageConverter underTest = new BusProtoStuffMessageConverter();
+    private final BusProtoStuffMessageConverter underTest = new BusProtoStuffMessageConverter(new EventTypeProvider());
 
     @Mock
     private Target targetMock;
