@@ -201,38 +201,36 @@ public class DdiRootController implements DdiRootControllerRestApi {
             if (ifMatch != null && !HttpUtil.matchesHttpHeader(ifMatch, artifact.getSha1Hash())) {
                 result = new ResponseEntity<>(HttpStatus.PRECONDITION_FAILED);
             } else {
-                final ActionStatus action = checkAndLogDownload(requestResponseContextHolder.getHttpServletRequest(),
+                final ActionStatus maybeAction = checkAndMaybeLogDownload(requestResponseContextHolder.getHttpServletRequest(),
                         target, module.getId());
-
-                final Long statusId = action.getId();
 
                 result = FileStreamingUtil.writeFileResponse(file, artifact.getFilename(), artifact.getCreatedAt(),
                         requestResponseContextHolder.getHttpServletResponse(),
                         requestResponseContextHolder.getHttpServletRequest(),
-                        (length, shippedSinceLastEvent,
-                                total) -> eventPublisher.publishEvent(new DownloadProgressEvent(
-                                        tenantAware.getCurrentTenant(), statusId, shippedSinceLastEvent,
-                                        serviceMatcher != null ? serviceMatcher.getBusId() : bus.getId())));
-
+                        (length, shippedSinceLastEvent, total) -> {
+                            if (maybeAction != null) {
+                                eventPublisher.publishEvent(new DownloadProgressEvent(
+                                tenantAware.getCurrentTenant(), maybeAction.getId(), shippedSinceLastEvent,
+                                serviceMatcher != null ? serviceMatcher.getBusId() : bus.getId()));
+                            }
+                });
             }
         }
         return result;
     }
 
-    private ActionStatus checkAndLogDownload(final HttpServletRequest request, final Target target, final Long module) {
+    private ActionStatus checkAndMaybeLogDownload(final HttpServletRequest request, final Target target, final Long module) {
         final Action action = controllerManagement
                 .getActionForDownloadByTargetAndSoftwareModule(target.getControllerId(), module)
                 .orElseThrow(() -> new SoftwareModuleNotAssignedToTargetException(module, target.getControllerId()));
-        final String range = request.getHeader("Range");
 
-        final String message;
+        // Logging range requests is pointless as there can be arbitrarily many of them.
+        final String range = request.getHeader("Range");
         if (range != null) {
-            message = RepositoryConstants.SERVER_MESSAGE_PREFIX + "Target downloads range " + range + " of: "
-                    + request.getRequestURI();
-        } else {
-            message = RepositoryConstants.SERVER_MESSAGE_PREFIX + "Target downloads " + request.getRequestURI();
+            return null;
         }
 
+        final String message = RepositoryConstants.SERVER_MESSAGE_PREFIX + "Target downloads " + request.getRequestURI();
         return controllerManagement.addInformationalActionStatus(
                 entityFactory.actionStatus().create(action.getId()).status(Status.DOWNLOAD).message(message));
     }
@@ -262,7 +260,7 @@ public class DdiRootController implements DdiRootControllerRestApi {
         final Artifact artifact = module.getArtifactByFilename(fileName)
                 .orElseThrow(() -> new EntityNotFoundException(Artifact.class, fileName));
 
-        checkAndLogDownload(requestResponseContextHolder.getHttpServletRequest(), target, module.getId());
+        checkAndMaybeLogDownload(requestResponseContextHolder.getHttpServletRequest(), target, module.getId());
 
         try {
             FileStreamingUtil.writeMD5FileResponse(requestResponseContextHolder.getHttpServletResponse(),
