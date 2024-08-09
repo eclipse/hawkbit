@@ -95,7 +95,7 @@ Open the update server in your browser:
 
 See below for how to build and run the update server on your own. In addition we have a [guide](https://www.eclipse.org/hawkbit/guides/runhawkbit/) for setting up a complete landscape.
 
-**Note**: this docker image supports both DDI and DMF APIs. However, in order to have DMF API working you shall have started additionally RabbitMQ on localhost:5672 with user guest/guest. Then the DMF will use / vhost. See more at [guide](https://www.eclipse.org/hawkbit/guides/runhawkbit/) -> _Configure RabbitMQ connection settings_.
+**Note**: this docker image supports both DDI and DMF APIs. However, in order to have DMF API working you shall have started additionally RabbitMQ on localhost:5672 with user guest. Then the DMF will use / vhost. See more at [guide](https://www.eclipse.org/hawkbit/guides/runhawkbit/) -> _Configure RabbitMQ connection settings_.
 
 # hawkBit (Spring boot) starters
 
