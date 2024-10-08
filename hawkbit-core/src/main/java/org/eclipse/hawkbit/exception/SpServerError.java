@@ -27,7 +27,7 @@ public enum SpServerError {
             "The given entity cannot be saved due to Constraint Violation"),
     SP_REPO_INVALID_TARGET_ADDRESS("hawkbit.server.error.repo.invalidTargetAddress",
             "The target address is not well formed"),
-    SP_REPO_ENTITY_NOT_EXISTS("hawkbit.server.error.repo.entitiyNotFound",
+    SP_REPO_ENTITY_NOT_EXISTS("hawkbit.server.error.repo.entityNotFound",
             "The given entity does not exist in the repository"),
     SP_REPO_CONCURRENT_MODIFICATION("hawkbit.server.error.repo.concurrentModification",
             "The given entity has been changed by another user/session"),
